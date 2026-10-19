@@ -30,7 +30,27 @@ const DEFAULT_PAGE_SIZE = 6;
 const TASTE_POOL_SIZE = 300;
 const CONTRAST_POOL_SIZE = 300;
 
+// The render records what it showed (FeedPageState), so two concurrent builds
+// for the same user could interleave reads/writes and let a fragrance appear
+// back-to-back with the same reason. Serialize per user. Single-instance
+// lock; multi-instance deploys need a DB advisory lock before M7.
+const buildLocks = new Map<string, Promise<FeedPage>>();
+
 export async function buildFeedPage(
+  prisma: PrismaInstance,
+  userId: string,
+  options?: BuildFeedPageOptions,
+): Promise<FeedPage> {
+  const previous = buildLocks.get(userId) ?? Promise.resolve();
+  const run = previous.catch(() => undefined).then(() => buildFeedPageInner(prisma, userId, options));
+  buildLocks.set(userId, run);
+  run.finally(() => {
+    if (buildLocks.get(userId) === run) buildLocks.delete(userId);
+  }).catch(() => undefined);
+  return run;
+}
+
+async function buildFeedPageInner(
   prisma: PrismaInstance,
   userId: string,
   options?: BuildFeedPageOptions,
@@ -76,28 +96,42 @@ export async function buildFeedPage(
   // taste pool = accord overlap or inspiration into the shelf; contrast pool
   // = provably zero overlap with known and rejected accords and no link.
   const excluded = [...shelfIds, ...allVotedIds, ...shownIds];
+  // sample offsets must stay inside the real pool size or Prisma skips past
+  // the end of a small catalogue and the page goes empty
+  const [tasteCount] = knownAccords.length > 0
+    ? await Promise.all([
+        prisma.fragrance.count({
+          where: { OR: [{ accords: { hasSome: knownAccords } }, { inspiredById: { in: shelfIds } }] },
+        }),
+      ])
+    : [0];
+  const contrastWhere = {
+    NOT: { accords: { hasSome: [...knownAccords, ...rejectedAccords] } },
+    inspiredById: null,
+    id: { notIn: excluded },
+  };
+  const [contrastCount] = knownAccords.length > 0
+    ? await Promise.all([prisma.fragrance.count({ where: contrastWhere })])
+    : [0];
   const [tasteRows, contrastRows] = await Promise.all([
     knownAccords.length > 0
       ? prisma.fragrance.findMany({
           where: { OR: [{ accords: { hasSome: knownAccords } }, { inspiredById: { in: shelfIds } }] },
           include: candidateInclude,
           take: TASTE_POOL_SIZE,
+          // deterministic per-user sample position, same reasoning as the
+          // contrast pool: without it every sweet-pref user saw the same 300
+          // first-sorted rows
+          skip: sampleSkip(userId, knownAccords, tasteCount, TASTE_POOL_SIZE),
           orderBy: { id: "asc" },
         })
       : [],
     knownAccords.length > 0
       ? prisma.fragrance.findMany({
-          where: {
-            // Prisma has no hasNone; negated hasSome is exactly "no overlap"
-            NOT: { accords: { hasSome: [...knownAccords, ...rejectedAccords] } },
-            inspiredById: null,
-            id: { notIn: excluded },
-          },
+          where: contrastWhere,
           include: candidateInclude,
           take: CONTRAST_POOL_SIZE,
-          // deterministic per-user sample position so pages vary but stay
-          // reproducible from the same user id
-          skip: sampleSkip(userId, knownAccords),
+          skip: sampleSkip(userId, knownAccords, contrastCount, CONTRAST_POOL_SIZE),
           orderBy: { id: "asc" },
         })
       : sampledWithoutAccords(prisma, excluded, userId, rejectedAccords),
@@ -203,10 +237,12 @@ function parseShown(raw: unknown): Map<string, string> {
   return map;
 }
 
-function sampleSkip(userId: string, accords: string[]): number {
-  // FNV-1a reused from the domain seed idea: a stable fraction of the pool
+function sampleSkip(userId: string, accords: string[], poolCount: number, take: number): number {
+  // FNV-1a reused from the domain seed idea: a stable fraction of the pool,
+  // clamped so a small catalogue never skips past its whole pool
+  if (poolCount <= take) return 0;
   const hash = makeJitterSeed(`${userId}|${[...accords].sort().join(",")}+${userId}`);
-  return hash % 120;
+  return hash % Math.max(poolCount - take, 1);
 }
 
 async function sampledWithoutAccords(
@@ -224,8 +260,7 @@ async function sampledWithoutAccords(
   };
   const total = await prisma.fragrance.count({ where });
   if (total === 0) return [];
-  const skip = makeJitterSeed(`contrast-empty-${userId}`) % Math.max(total - CONTRAST_POOL_SIZE, 1);
-  return prisma.fragrance.findMany({
+  const skip = makeJitterSeed(`contrast-empty-${userId}`) % Math.max(total - CONTRAST_POOL_SIZE, 1);  return prisma.fragrance.findMany({
     where,
     include: candidateInclude,
     take: CONTRAST_POOL_SIZE,

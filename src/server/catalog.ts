@@ -183,8 +183,12 @@ export async function importDumpRecords(
     // here, or skipDuplicates would silently drop the later one.
     const ownedBy = slugOwners.get(r.slugBase);
     let slug = ownedBy === undefined || ownedBy === pid ? r.slugBase : `${r.slugBase}-${r.fid}`;
-    if (heldSlugs.has(slug) && ownedBy !== pid) {
-      slug = `${r.slugBase}-${r.fid}`;
+    // the fid suffix can also collide (rare, but a silent skipDuplicates drop
+    // would strand a fragrance), so walk suffixes until one is unheld
+    let suffix = 0;
+    while (heldSlugs.has(slug) && ownedBy !== pid) {
+      suffix += 1;
+      slug = `${r.slugBase}-${r.fid}${suffix > 1 ? `-${suffix}` : ""}`;
     }
     heldSlugs.add(slug);
     const slugLookup = houseNameSlug(r.brandName);

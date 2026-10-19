@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildFeedPage } from "@/server/feed";
-import { voteAction } from "./feedActions";
+import { morePicksAction, voteAction } from "./feedActions";
 
 const primaryButton = {
   display: "inline-block",
@@ -106,9 +106,12 @@ async function HomeContent({ searchParams }: { searchParams: Promise<{ page?: st
       )}
       {cards.length > 0 ? (
         <p style={{ marginTop: "1.25rem" }}>
-          <Link href={`/?page=${page + 1}`} style={primaryButton}>
-            More picks
-          </Link>
+          <form action={morePicksAction} style={{ display: "inline" }}>
+            <input type="hidden" name="page" value={page} />
+            <button type="submit" style={primaryButton}>
+              More picks
+            </button>
+          </form>
           {" "}
           <Link href="/shelf" style={{ ...primaryButton, background: "#f5f5f5", color: "#111" }}>
             My shelf

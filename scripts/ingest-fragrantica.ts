@@ -12,7 +12,7 @@
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { prisma } from "../src/lib/prisma";
-import { importDumpRecords } from "../src/server/catalog";
+import { applyProvisionalHouseTiers, importDumpRecords } from "../src/server/catalog";
 import { mapDumpLine, type MappedDumpFragrance } from "../src/ingest/fragranticaDump";
 
 function parseArgs(): { file: string } {
@@ -32,7 +32,6 @@ const MAX_ERROR_RATE = 0.005;
 
 async function main(): Promise<void> {
   const { file } = parseArgs();
-  const { applyProvisionalHouseTiers } = await import("../src/server/catalog");
 
   let seen = 0;
   let mapped = 0;

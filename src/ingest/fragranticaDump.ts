@@ -40,8 +40,6 @@ export interface DumpLineResult {
   error: DumpMappingError | undefined;
 }
 
-const UNKNOWN = "unknown"; // never an invented family value
-
 function slugBase(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
@@ -210,7 +208,6 @@ export function mapDumpLine(line: string): DumpLineResult {
     }
   }
 
-  void UNKNOWN;
   return {
     record: {
       fid,

@@ -39,3 +39,14 @@ export async function voteAction(formData: FormData): Promise<void> {
   }
   redirect(back);
 }
+
+export async function morePicksAction(formData: FormData): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/signin");
+  // advancing the feed is a deliberate POST, never a Link prefetch: the page
+  // render legitimately records what it showed (FeedPageState), so an
+  // auto-triggered GET would consume a page behind the user's back
+  const requested = Number(formData.get("page") ?? "2");
+  const next = Number.isInteger(requested) && requested > 0 ? requested + 1 : 2;
+  redirect(`/?page=${next}`);
+}
