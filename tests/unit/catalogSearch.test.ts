@@ -81,4 +81,9 @@ describe("searchCatalog", () => {
     expect(searchCatalog(accented, "celine")).toHaveLength(1);
     expect(searchCatalog(accented, "generalement")).toHaveLength(1);
   });
+
+  it("ignores leading and trailing whitespace around the query", () => {
+    expect(searchCatalog(catalog, " sauvage ")).toHaveLength(2);
+    expect(searchCatalog(catalog, "\tblack?")).toHaveLength(0);
+  });
 });

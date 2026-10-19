@@ -31,4 +31,13 @@ describe("diffReleases", () => {
     const next = [rec("b7118", "h1", "Saleel Parfums")];
     expect(diffReleases(prev, next)).toEqual({ added: [], removed: [] });
   });
+
+  it("refuses to diff a snapshot that lists the same pid twice", () => {
+    // a duplicated pid means the ingest or the export is broken; diffing it
+    // anyway would emit the same drop event twice and break the follow stream's
+    // no-double-fire guarantee
+    const broken = [rec("p1", "h1"), rec("p1", "h1")];
+    expect(() => diffReleases([rec("old", "h1")], broken)).toThrow(/duplicate pid/);
+    expect(() => diffReleases(broken, [rec("old", "h1")])).toThrow(/duplicate pid/);
+  });
 });
