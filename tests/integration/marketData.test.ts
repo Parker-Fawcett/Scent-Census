@@ -9,8 +9,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createPrismaClient, type PrismaInstance } from "@/lib/prisma";
 import {
   computeShelfWorth,
-  dbMarketSource,
   ingestCaptures,
+  loadMarketSource,
 } from "@/server/marketData";
 import { addItem } from "@/server/collection";
 import type { PriceCapture } from "@/domain/types";
@@ -52,7 +52,7 @@ async function seedUser(): Promise<string> {
 }
 
 describe("ingestCaptures", () => {
-  it("persists captures and round-trips them through dbMarketSource", async () => {
+  it("persists captures and round-trips them through loadMarketSource", async () => {
     const fragranceId = await seedFragrance();
     const captures: PriceCapture[] = [
       { fragranceId, source: "EBAY_ASKING", priceCents: 9500, capturedAt: daysAgoIso(1), sizeMl: 100 },
@@ -61,15 +61,16 @@ describe("ingestCaptures", () => {
     const inserted = await ingestCaptures(prisma, captures);
     expect(inserted).toBe(2);
 
-    const points = dbMarketSource(prisma).pointsFor(fragranceId);
+    const source = await loadMarketSource(prisma, [fragranceId]);
+    const points = source.pointsFor(fragranceId);
     expect(points).toHaveLength(2);
-    expect(points.map((p) => p.priceCents).sort()).toEqual([9500, 11000]);
+    expect(points.map((p) => p.priceCents).sort((a, b) => a - b)).toEqual([9500, 11000]);
     expect(points.every((p) => p.source === "EBAY_ASKING" && p.sizeMl === 100)).toBe(true);
   });
 
   it("keeps listing state fresh: re-ingesting a listing replaces its older row", async () => {
     const fragranceId = await seedFragrance();
-    const listing = (over: Partial<PriceCapture>): PriceCapture[] => [
+    const listing = (over: { priceCents?: number; capturedAt?: string }): Array<PriceCapture & { sourceListingId: string }> => [
       {
         fragranceId,
         source: "EBAY_ASKING",
@@ -78,13 +79,14 @@ describe("ingestCaptures", () => {
         sizeMl: 100,
         sourceListingId: "ebay-42",
         ...over,
-      } as PriceCapture,
-    ].map((p) => p);
+      },
+    ];
 
     await ingestCaptures(prisma, listing({}));
     await ingestCaptures(prisma, listing({ priceCents: 14000, capturedAt: daysAgoIso(0) }));
 
-    const sellerStream = dbMarketSource(prisma).pointsFor(fragranceId);
+    const source = await loadMarketSource(prisma, [fragranceId]);
+    const sellerStream = source.pointsFor(fragranceId);
     expect(sellerStream).toHaveLength(1);
     expect(sellerStream[0].priceCents).toBe(14000);
   });
@@ -95,7 +97,8 @@ describe("ingestCaptures", () => {
       { fragranceId, source: "EBAY_ASKING", priceCents: 9000, capturedAt: daysAgoIso(2), sizeMl: 50 },
       { fragranceId, source: "EBAY_ASKING", priceCents: 9200, capturedAt: daysAgoIso(1), sizeMl: 50 },
     ]);
-    const points = dbMarketSource(prisma).pointsFor(fragranceId);
+    const source = await loadMarketSource(prisma, [fragranceId]);
+    const points = source.pointsFor(fragranceId);
     expect(points).toHaveLength(2);
   });
 });
@@ -160,8 +163,10 @@ describe("computeShelfWorth (live pipeline)", () => {
     const summary = await computeShelfWorth(prisma, userId, NOW);
     expect(summary.bottlesWithMarket).toBe(2);
     // 100ml mids around $200; 30ml mids around $70; far apart, both present
-    expect(summary.totalWorthCents.mid).toBeGreaterThan(20000);
-    expect(summary.totalWorthCents.mid).toBeLessThan(30000);
+    const worth = summary.totalWorthCents;
+    if (!worth) throw new Error("expected a worth range with two priced bottles");
+    expect(worth.mid).toBeGreaterThan(20000);
+    expect(worth.mid).toBeLessThan(30000);
     expect(summary.bottles.find((b) => b.status === "confident")).toBeTruthy();
   });
 });
