@@ -71,7 +71,11 @@ async function HomeContent({ searchParams }: { searchParams: Promise<{ page?: st
               key={card.candidate.fragranceId}
               style={{ padding: "0.9rem 0", borderBottom: "1px solid #eee" }}
             >
-              <strong>{card.candidate.name}</strong>
+              <strong>
+                <Link href={`/fragrance/${card.candidate.fragranceSlug}`} style={{ color: "inherit" }}>
+                  {card.candidate.name}
+                </Link>
+              </strong>
               {" · "}
               <span style={{ color: "#555" }}>{card.candidate.house.name}</span>
               {card.candidate.year ? ` · ${card.candidate.year}` : ""}

@@ -5,6 +5,7 @@
 import type { CensusBucket, CloneVotePair } from "./types";
 import { floors } from "./floors";
 
+
 export const BUCKET_VALUES: Record<CensusBucket, number> = {
   SPOT_ON: 95,
   CLOSE: 80,
@@ -14,6 +15,22 @@ export const BUCKET_VALUES: Record<CensusBucket, number> = {
 };
 
 export type RankLevel = "none" | "low" | "confident";
+
+/** Human labels for the five buckets (product pages, vote buttons). The
+ * words ARE the product honesty surface, so they live next to the buckets. */
+export const BUCKET_LABELS: Record<CensusBucket, string> = {
+  SPOT_ON: "Spot on",
+  CLOSE: "Close",
+  SIMILAR: "Similar",
+  SAME_FAMILY: "Same family",
+  NOT_CLOSE: "Not close",
+};
+
+export const RANK_LEVEL_LABELS: Record<RankLevel, string> = {
+  none: "Unranked",
+  low: "Low confidence",
+  confident: "Confident",
+};
 
 export interface CensusRollup {
   sampleSize: number;

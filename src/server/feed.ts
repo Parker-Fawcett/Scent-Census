@@ -192,6 +192,7 @@ const candidateInclude = {
 
 type CandidateRow = {
   id: string;
+  slug: string;
   name: string;
   year: number | null;
   inspiredById: string | null;
@@ -204,6 +205,7 @@ type CandidateRow = {
 function toCandidate(row: CandidateRow): FeedCandidate {
   return {
     fragranceId: row.id,
+    fragranceSlug: row.slug,
     name: row.name,
     house: {
       id: row.house.id,

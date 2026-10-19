@@ -35,6 +35,7 @@ const HOUSE_CLONE = {
 function candidate(id: string, overrides?: Partial<FeedCandidate>): FeedCandidate {
   return {
     fragranceId: id,
+    fragranceSlug: `cand-${id.toLowerCase()}`,
     name: `Cand-${id}`,
     house: HOUSE_DESIGNER,
     accordNames: [FRESH],

@@ -23,6 +23,7 @@ const OPPOSITE = ["leather", "smoky", "tobacco"];
 function candidate(house: string, tier: "CLONE" | "DESIGNER" | "NICHE", name: string, accords: string[], inspiredBy: string | null = null): FeedCandidate {
   return {
     fragranceId: `${house}-${name}`,
+    fragranceSlug: `${house}-${name}`.toLowerCase(),
     name,
     house: { id: house, name: house, slug: house.toLowerCase(), tier },
     accordNames: accords,

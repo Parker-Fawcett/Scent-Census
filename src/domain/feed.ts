@@ -19,6 +19,7 @@ export interface FeedCandidateHouse {
 
 export interface FeedCandidate {
   fragranceId: string;
+  fragranceSlug: string;
   name: string;
   house: FeedCandidateHouse;
   accordNames: string[];

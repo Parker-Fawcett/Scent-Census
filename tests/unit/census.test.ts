@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  BUCKET_LABELS,
   BUCKET_VALUES,
   clearCloneVote,
   compareClones,
+  RANK_LEVEL_LABELS,
   rollupCensus,
   upsertCloneVote,
 } from "@/domain/census";
@@ -14,6 +16,18 @@ const vote = (userId: string, bucket: CloneVotePair["bucket"]): CloneVotePair =>
   cloneId: "clone",
   targetId: "target",
   bucket,
+});
+
+describe("labels", () => {
+  it("cover every bucket and rank level, with the census-census wording pinned", () => {
+    const buckets = Object.keys(BUCKET_LABELS).sort();
+    expect(buckets).toEqual(["CLOSE", "NOT_CLOSE", "SAME_FAMILY", "SIMILAR", "SPOT_ON"]);
+    expect(BUCKET_LABELS.SPOT_ON).toBe("Spot on");
+    expect(BUCKET_LABELS.NOT_CLOSE).toBe("Not close");
+    expect(RANK_LEVEL_LABELS.none).toBe("Unranked");
+    expect(RANK_LEVEL_LABELS.low).toBe("Low confidence");
+    expect(RANK_LEVEL_LABELS.confident).toBe("Confident");
+  });
 });
 
 describe("upsertCloneVote", () => {
