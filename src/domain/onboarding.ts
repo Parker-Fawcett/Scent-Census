@@ -65,7 +65,7 @@ export function validateOnboarding(raw: RawOnboarding): ParsedOnboarding {
       );
     }
   }
-  if (accordPrefs.length > 0 && accordPrefs.length !== (raw.accordPrefs?.length ?? 0)) {
+  if (raw.accordPrefs !== undefined && raw.accordPrefs.length === 0) {
     throw new Error("onboarding: at least one accord when accords are provided");
   }
   return {
