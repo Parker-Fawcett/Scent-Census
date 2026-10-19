@@ -46,6 +46,17 @@ describe("searchCatalog", () => {
     expect(hits).toHaveLength(2);
   });
 
+  it("matches when tokens span name and house (prf multi-field queries)", () => {
+    // corpus reality: users search "ambition rasasi", "icarus velixir" —
+    // tokens split across fields; whole-phrase substring is not enough
+    const hits = searchCatalog(catalog, "intense armaf");
+    expect(hits.map((h) => h.fragrance.id)).toContain("3");
+  });
+
+  it("rejects multi-token queries where one token matches nothing", () => {
+    expect(searchCatalog(catalog, "sauvage nonexistent").map((h) => h.fragrance.id)).toEqual([]);
+  });
+
   it("ranks exact name over prefix over substring over house", () => {
     const items = [
       frag("a", "Sauvage Elixir", house("dior", "Dior")),

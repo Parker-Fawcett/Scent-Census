@@ -18,12 +18,26 @@ function fold(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
-function kindOf(name: string, house: string, q: string): MatchKind | null {
-  if (name === q) return "exact-name";
-  if (name.startsWith(q)) return "name-prefix";
-  if (name.includes(q)) return "name-contains";
-  if (house.includes(q)) return "house";
+function tokenKind(foldedName: string, foldedHouse: string, token: string): MatchKind | null {
+  if (foldedName === token) return "exact-name";
+  if (foldedName.startsWith(token)) return "name-prefix";
+  if (foldedName.includes(token)) return "name-contains";
+  if (foldedHouse.includes(token)) return "house";
   return null;
+}
+
+function kindOf(name: string, house: string, q: string): MatchKind | null {
+  // multi-token queries match when EVERY token lands in name or house; the
+  // hit kind is the WEAKEST token match, so ranking stays conservative
+  const tokens = q.split(/\s+/).filter(Boolean).slice(0, 5);
+  if (tokens.length === 0) return null;
+  let weakest: MatchKind | null = null;
+  for (const token of tokens) {
+    const kind = tokenKind(name, house, token);
+    if (kind === null) return null;
+    if (weakest === null || KIND_RANK[kind] > KIND_RANK[weakest]) weakest = kind;
+  }
+  return weakest;
 }
 
 const KIND_RANK: Record<MatchKind, number> = {

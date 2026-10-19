@@ -8,6 +8,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createPrismaClient, type PrismaInstance } from "@/lib/prisma";
 import { importDumpRecords, importCatalogRecords, loadDumpByPids } from "@/server/catalog";
+import { applyProvisionalHouseTiers } from "@/server/catalog";
 import { mapDumpLine, type MappedDumpFragrance } from "../../src/ingest/fragranticaDump";
 
 const TEST_URL = process.env.TEST_DATABASE_URL;
@@ -143,8 +144,33 @@ describe("importDumpRecords", () => {
     void pyramids;
   });
 
-  it("measures no-nonsense scale: 1000 corpus records import inside one call", async () => {
-    const batch: MappedDumpFragrance[] = [];
+  it("keeps two same-named corpus rows of one house as distinct rows", async () => {
+    // regression: the corpus contains ~2000 brand+name repeat lists (same
+    // name listed under two corpus ids). Within one createMany they used to
+    // resolve to the same slug and skipDuplicates silently dropped them.
+    await importDumpRecords(prisma, [
+      record({ fid: 900007, name: "Contradiction", brandName: "Calvin Klein Test", slugBase: "contradiction" }),
+      record({ fid: 900008, name: "Contradiction", brandName: "Calvin Klein Test", slugBase: "contradiction" }),
+    ]);
+    const rows = await loadDumpByPids(prisma, ["fragrantica-900007", "fragrantica-900008"]);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("tiers the curated clone houses and leaves the rest DESIGNER", async () => {
+    // PRD 7.6: curation sets house tiers; the corpus ships everything as a
+    // DESIGNER default. This is the honestly-known clone-house subset.
+    await importDumpRecords(prisma, [
+      record({ fid: 900009, brandName: "Armaf", name: "Tier Check Clone" }),
+      record({ fid: 900010, brandName: "Dior", name: "Tier Check Designer" }),
+    ]);
+    await applyProvisionalHouseTiers(prisma);
+    const cloneRow = await prisma.house.findFirst({ where: { name: "Armaf" } });
+    const designerRow = await prisma.house.findFirst({ where: { name: "Dior" } });
+    expect(cloneRow!.tier).toBe("CLONE");
+    expect(designerRow!.tier).toBe("DESIGNER");
+  });
+
+  it("measures no-nonsense scale: 1000 corpus records import inside one call", async () => {    const batch: MappedDumpFragrance[] = [];
     for (let i = 0; i < 1000; i += 1) {
       batch.push(
         record({

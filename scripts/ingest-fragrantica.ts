@@ -32,6 +32,7 @@ const MAX_ERROR_RATE = 0.005;
 
 async function main(): Promise<void> {
   const { file } = parseArgs();
+  const { applyProvisionalHouseTiers } = await import("../src/server/catalog");
 
   let seen = 0;
   let mapped = 0;
@@ -53,8 +54,7 @@ async function main(): Promise<void> {
     batchStart = Date.now();
   };
 
-  const stream = createInterface({ input: createReadStream(file, "utf8"), crlfDelay: Infinity });
-  for await (const line of stream) {
+  const stream = createInterface({ input: createReadStream(file, "utf8"), crlfDelay: Infinity });  for await (const line of stream) {
     if (line.trim() === "") continue;
     seen += 1;
     const result = mapDumpLine(line);
@@ -87,6 +87,8 @@ async function main(): Promise<void> {
     console.error("ABORTED: error rate above the loud/abort line; inspect before trusting the load");
     process.exit(1);
   }
+  await applyProvisionalHouseTiers(prisma);
+  console.log("house tier curation applied (PRD 7.6 list in src/server/catalog.ts)");
   await prisma.$disconnect();
 }
 

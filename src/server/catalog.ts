@@ -173,11 +173,20 @@ export async function importDumpRecords(
       if (row.catalogueSourcePid) slugOwners.set(row.slug, row.catalogueSourcePid);
     }
   }
+  const heldSlugs = new Set<string>(slugOwners.keys());
 
   const perfumeCore = (r: MappedDumpFragrance) => {
     const pid = `${CORPUS_PID_PREFIX}${r.fid}`;
+    // Sequential slug handout: the DB-owned map only covers rows created
+    // BEFORE this call, so two same-slug records inside one batch (the
+    // corpus repeats ~2000 brand+name lists under two ids) must resolve
+    // here, or skipDuplicates would silently drop the later one.
     const ownedBy = slugOwners.get(r.slugBase);
-    const slug = ownedBy === undefined || ownedBy === pid ? r.slugBase : `${r.slugBase}-${r.fid}`;
+    let slug = ownedBy === undefined || ownedBy === pid ? r.slugBase : `${r.slugBase}-${r.fid}`;
+    if (heldSlugs.has(slug) && ownedBy !== pid) {
+      slug = `${r.slugBase}-${r.fid}`;
+    }
+    heldSlugs.add(slug);
     const slugLookup = houseNameSlug(r.brandName);
     const houseId =
       resolveHouse(r.brandName, slugLookup) ??
@@ -280,6 +289,31 @@ export interface LoadedDumpFragrance {
   house: { id: string; name: string };
   accordNames: string[];
   notes: { name: string; position: string; weight: number }[];
+}
+
+// ---- curation (PRD 7.6): the corpus ships every house as DESIGNER default;
+// the honestly-known GCC clone/inspiro-heavy houses get the CLONE tier so the
+// feed's house-fit steering works from day one. Keyed by name slug so the
+// corpus's casing variants ("PARIS CORNER" / "Paris Corner") both match.
+// Deliberately minimal: houses I cannot honestly classify stay DESIGNER.
+const CLONE_TIER_HOUSES = [
+  "afnan",
+  "arabiyat-prestige",
+  "armaf",
+  "fragrance-world",
+  "lattafa-perfumes",
+  "mykonos",
+  "paris-corner",
+].map((slug) => `house-dump-${slug}`);
+
+/**
+ * Re-runnable curation pass; part of the ingest pipeline.
+ */
+export async function applyProvisionalHouseTiers(prisma: PrismaInstance): Promise<void> {
+  await prisma.house.updateMany({
+    where: { slug: { in: CLONE_TIER_HOUSES }, tier: "DESIGNER" },
+    data: { tier: "CLONE" },
+  });
 }
 
 /** Test/verification helper: load by corpus pid, with pyramid resolved. */
