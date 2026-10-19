@@ -19,4 +19,7 @@ export const env = {
   // killing the app, but the one requirement (auth secret) stays loud.
   googleClientId: process.env["GOOGLE_CLIENT_ID"] ?? null,
   googleClientSecret: process.env["GOOGLE_CLIENT_SECRET"] ?? null,
+  // Vercel cron authenticates with this shared secret (Hobby tier, daily).
+  // Missing in dev simply disables cron endpoints.
+  cronSecret: process.env["CRON_SECRET"] ?? null,
 } as const;

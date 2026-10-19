@@ -42,7 +42,15 @@ export async function buildFeedPage(
   options?: BuildFeedPageOptions,
 ): Promise<FeedPage> {
   const previous = buildLocks.get(userId) ?? Promise.resolve();
-  const run = previous.catch(() => undefined).then(() => buildFeedPageInner(prisma, userId, options));
+  const run = previous.catch(() => undefined).then(() =>
+    // the in-process lock keeps a single instance honest; the advisory lock
+    // below keeps multi-instance deploys honest. pg_advisory_xact_lock is
+    // released at transaction commit, so a crashed build cannot strand it.
+    prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
+      return buildFeedPageInner(tx as unknown as PrismaInstance, userId, options);
+    }),
+  );
   buildLocks.set(userId, run);
   run.finally(() => {
     if (buildLocks.get(userId) === run) buildLocks.delete(userId);
