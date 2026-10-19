@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 !.env.example
 data/
+
+# local tooling artifacts
+.playwright-cli/
+test-results/
