@@ -30,11 +30,11 @@ export default async function Home({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const page = Number((await searchParams).page ?? "1");
-  const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+  // searchParams is runtime data in Next 16: the raw promise rides THROUGH
+  // the Suspense boundary, and the data component awaits it inside
   return (
     <Suspense fallback={<main style={{ maxWidth: 720, margin: "3rem auto", padding: "0 1rem" }}>Loading your feed...</main>}>
-      <HomeContent page={safePage} />
+      <HomeContent searchParams={searchParams} />
     </Suspense>
   );
 }
@@ -42,8 +42,10 @@ export default async function Home({
 // Why Connection: auth() triggers next-auth's CSRF random on every
 // cookie-less prerender, which Cache Components blocks (bisected in M3). The
 // split data component + connection() keeps the prerender honest.
-async function HomeContent({ page }: { page: number }) {
+async function HomeContent({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   await connection();
+  const requested = Number((await searchParams).page ?? "1");
+  const page = Number.isInteger(requested) && requested > 0 ? requested : 1;
   const session = await auth();
   if (!session?.user?.id) {
     return <SignedOut />;
