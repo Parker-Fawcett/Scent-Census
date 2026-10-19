@@ -14,7 +14,7 @@ import {
 import type { FragDBCatalog, FragDBInputs, MappedCatalogFragrance } from "../../src/ingest/fragdb";
 import { searchCatalog } from "@/domain/catalogSearch";
 
-const samplesDir = join(__dirname, "../../fixtures/fragdb-samples");
+const samplesDir = join(__dirname, "../fixtures/fragdb-samples");
 const read = (name: string) => readFileSync(join(samplesDir, name), "utf8");
 
 // Re-serialize parsed rows with RFC4180 quoting forced on every field, so

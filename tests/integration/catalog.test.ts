@@ -62,7 +62,7 @@ describe("importCatalogRecords", () => {
   });
 
   it("searches the real sample: the full mapper output lands and gets found", async () => {
-    const samples = join(__dirname, "../../fixtures/fragdb-samples");
+    const samples = join(__dirname, "../fixtures/fragdb-samples");
     const catalog = mapFragDBCatalog({
       fragrancesCsv: readFileSync(join(samples, "fragrances.csv"), "utf8"),
       notesCsv: readFileSync(join(samples, "notes.csv"), "utf8"),
