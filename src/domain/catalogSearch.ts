@@ -13,8 +13,9 @@ export interface CatalogHit {
 }
 
 function fold(s: string): string {
-  // strip diacritics (NFD combining marks), then lowercase
-  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  // strip diacritics (NFD combining marks), then lowercase, then trim ambient
+  // whitespace so a query like "sauvage " still lands on "Sauvage"
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
 function kindOf(name: string, house: string, q: string): MatchKind | null {

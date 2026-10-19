@@ -93,6 +93,7 @@ model User {
   cloneVotes      CloneVote[]
   follows         Follow[]
   updateEvents    UpdateEvent[]
+  catalogueRequests CatalogueRequest[]
   claimedCreator  Creator?
 }
 
@@ -164,7 +165,7 @@ model CatalogueRequest {
   id            String   @id @default(cuid())
   // nullable so non-users can request too; users get status visibility
   requestedById String?
-  requestedBy   User?    @relation(fields: [requestedById], references: [id])
+  requestedBy   User?    @relation(fields: [requestedById], references: [id], onDelete: SetNull)
   name          String
   houseGuess    String?
   // if the request matched a known FragDB pid, it ingests directly
@@ -176,7 +177,7 @@ model CatalogueRequest {
 model CollectionItem {
   id             String    @id @default(cuid())
   userId         String
-  user           User      @relation(fields: [userId], references: [id])
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   fragranceId    String
   fragrance      Fragrance @relation(fields: [fragranceId], references: [id])
   sizeMl         Int?
@@ -192,7 +193,7 @@ model CollectionItem {
 
 model Vote {
   userId      String
-  user        User @relation(fields: [userId], references: [id])
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
   fragranceId String
   fragrance   Fragrance @relation(fields: [fragranceId], references: [id])
   direction   VoteDirection
@@ -202,6 +203,7 @@ model Vote {
   updatedAt   DateTime @updatedAt
 
   @@id([userId, fragranceId])
+  @@index([fragranceId])
 }
 
 model PricePoint {
@@ -236,7 +238,7 @@ model FragranceEstimate {
 
 model CloneVote {
   userId   String
-  user     User @relation(fields: [userId], references: [id])
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
   cloneId  String
   clone    Fragrance @relation("CloneVoteClone", fields: [cloneId], references: [id])
   targetId String
@@ -280,7 +282,7 @@ model Creator {
 model Follow {
   id              String      @id @default(cuid())
   userId          String
-  user            User        @relation(fields: [userId], references: [id])
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   subjectType     SubjectType
   subjectId       String
   // guards double-emitting drop and review events
@@ -294,7 +296,7 @@ model Follow {
 model UpdateEvent {
   id          String          @id @default(cuid())
   userId      String
-  user        User            @relation(fields: [userId], references: [id])
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   type        UpdateEventType
   subjectType SubjectType
   subjectId   String

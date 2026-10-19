@@ -12,7 +12,17 @@ export interface ReleaseDiff {
   removed: ReleaseRecord[];
 }
 
+function assertSnapshotUnique(records: ReleaseRecord[], side: string): void {
+  if (new Set(records.map((r) => r.pid)).size !== records.length) {
+    throw new Error(
+      `release diff: duplicate pid in ${side} snapshot; an ingest or export is broken (PRD 7.7)`,
+    );
+  }
+}
+
 export function diffReleases(prev: ReleaseRecord[], next: ReleaseRecord[]): ReleaseDiff {
+  assertSnapshotUnique(prev, "previous");
+  assertSnapshotUnique(next, "next");
   const prevIds = new Set(prev.map((r) => r.pid));
   const nextIds = new Set(next.map((r) => r.pid));
   return {
