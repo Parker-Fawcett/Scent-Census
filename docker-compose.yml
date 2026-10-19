@@ -1,0 +1,23 @@
+services:
+  db-dev:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: scent-dev
+      POSTGRES_USER: scent
+      POSTGRES_DB: scent_dev
+    ports:
+      - "5544:5432"
+    volumes:
+      - scent-dev-data:/var/lib/postgresql/data
+
+  db-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: scent-test
+      POSTGRES_USER: scent
+      POSTGRES_DB: scent_test
+    ports:
+      - "5545:5432"
+
+volumes:
+  scent-dev-data:
