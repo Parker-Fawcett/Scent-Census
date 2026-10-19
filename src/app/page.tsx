@@ -105,7 +105,7 @@ async function HomeContent({ searchParams }: { searchParams: Promise<{ page?: st
         </ul>
       )}
       {cards.length > 0 ? (
-        <p style={{ marginTop: "1.25rem" }}>
+        <div style={{ marginTop: "1.25rem" }}>
           <form action={morePicksAction} style={{ display: "inline" }}>
             <input type="hidden" name="page" value={page} />
             <button type="submit" style={primaryButton}>
@@ -116,7 +116,7 @@ async function HomeContent({ searchParams }: { searchParams: Promise<{ page?: st
           <Link href="/shelf" style={{ ...primaryButton, background: "#f5f5f5", color: "#111" }}>
             My shelf
           </Link>
-        </p>
+        </div>
       ) : null}
     </main>
   );
