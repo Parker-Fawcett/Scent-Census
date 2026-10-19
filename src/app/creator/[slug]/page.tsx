@@ -1,10 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { toggleFollow } from "@/server/follows";
 import { toggleFollowAction } from "@/app/fragrance/[slug]/censusActions";
 async function CreatorData({ slug }: { slug: string }) {
   await connection();

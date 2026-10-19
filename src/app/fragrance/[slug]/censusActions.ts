@@ -37,14 +37,14 @@ export async function clearCloneVoteAction(formData: FormData): Promise<void> {
   redirect(`/fragrance/${slug}`);
 }
 
-export async function toggleFollowAction(formData: FormData): Promise<void> {
+export async function toggleFollowAction(_formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
-  const slug = String(formData.get("slug") ?? "");
-  const subjectTypeRaw = String(formData.get("subjectType") ?? "FRAGRANCE");
+  const slug = String(_formData.get("slug") ?? "");
+  const subjectTypeRaw = String(_formData.get("subjectType") ?? "FRAGRANCE");
   const subjectType =
     subjectTypeRaw === "HOUSE" || subjectTypeRaw === "CREATOR" ? subjectTypeRaw : "FRAGRANCE";
-  const subjectId = String(formData.get("subjectId") ?? "");
+  const subjectId = String(_formData.get("subjectId") ?? "");
   if (subjectId === "") redirect(`/fragrance/${slug}`);
   await toggleFollow(prisma, session.user.id, { subjectType, subjectId });
   redirect(`/fragrance/${slug}`);

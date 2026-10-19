@@ -28,9 +28,9 @@ function parseArgs(): { file: string; out: string } {
     return i >= 0 ? args[i + 1] : undefined;
   };
   const file = flag("--file");
-  const out = flag("--out");
-  if (!file || !out) {
-    console.error("usage: tsx scripts/census-candidates.ts --file <perfumes.jsonl> --out <candidates.json>");
+  const out = flag("--out") ?? "data/curation/census-candidates.json";
+  if (!file) {
+    console.error("usage: tsx scripts/census-candidates.ts --file <perfumes.jsonl> [--out <candidates.json>]");
     process.exit(2);
   }
   return { file, out };
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
     `// curation/clone-edges.approved.json and the loader runs.\n`;
   const body = JSON.stringify(curated, null, 2);
   const writer = createWriteStream(out, "utf8");
-  writer.write(header + "export const CENSUS_CANDIDATES = " + body + "; /* eslint-disable */\n");
+  writer.write(header + "export const CENSUS_CANDIDATES = " + body + ";\n");
   writer.end();
 
   const concise = (c: (typeof curated)[number]) => `${c.cloneBrand} ${c.cloneName} -> ${c.targetName} (${c.up}/${c.down})`;

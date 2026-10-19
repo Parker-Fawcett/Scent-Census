@@ -75,7 +75,7 @@ export async function emitUpdateEvent(
         type: input.type,
         subjectType: input.subjectType,
         subjectId: input.subjectId,
-        payload: { path: ["dedupKey"], equals: input.dedupKey },
+        dedupKey: input.dedupKey,
       },
       select: { id: true },
     });
@@ -84,17 +84,24 @@ export async function emitUpdateEvent(
 
   await prisma.$transaction(async (tx) => {
     for (const follower of followers) {
-      await tx.updateEvent.create({
-        data: {
-          userId: follower.userId,
-          type: input.type,
-          subjectType: input.subjectType,
-          subjectId: input.subjectId,
-          payload: { ...((input.payload ?? {}) as object), dedupKey: input.dedupKey },
-          occurredAt: input.occurredAt,
-          sourceLabel: input.sourceLabel,
-        },
-      });
+      try {
+        await tx.updateEvent.create({
+          data: {
+            userId: follower.userId,
+            type: input.type,
+            subjectType: input.subjectType,
+            subjectId: input.subjectId,
+            payload: input.payload ?? {},
+            occurredAt: input.occurredAt,
+            sourceLabel: input.sourceLabel,
+            dedupKey: input.dedupKey ?? null,
+          },
+        });
+      } catch (error) {
+        // concurrent emissions collapse on the unique index; treat as already emitted
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
+        throw error;
+      }
     }
   });
   return { emitted: followers.length };

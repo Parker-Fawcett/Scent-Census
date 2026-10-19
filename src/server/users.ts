@@ -4,6 +4,7 @@
 // an account takeover; onboarding saves MERGE, because the spec says a
 // skipped step must never freeze state.
 
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import type { User } from "@prisma/client";
 import { validateOnboarding, type RawOnboarding } from "@/domain/onboarding";
@@ -54,12 +55,22 @@ export async function registerUser(
   const existing = await prisma.user.findUnique({ where: { email: normalized } });
   if (existing) throw new Error(`register: email already registered (${normalized})`);
 
-  return prisma.user.create({
-    data: {
-      email: normalized,
-      passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
-    },
-  });
+  try {
+    return await prisma.user.create({
+      data: {
+        email: normalized,
+        passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
+      },
+    });
+  } catch (error) {
+    // two concurrent registrations can both pass the findUnique above; the
+    // unique constraint is the real arbiter, so a collision reads as the
+    // honest "already registered" rather than a 500
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new Error(`register: email already registered (${normalized})`);
+    }
+    throw error;
+  }
 }
 
 export async function verifyCredentials(

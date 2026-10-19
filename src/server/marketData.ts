@@ -61,6 +61,9 @@ export async function ingestCaptures(
       await tx.pricePoint.deleteMany({
         where: {
           sourceListingId: { in: listingIds },
+          // listing ids are only unique per source; scoping by source keeps a
+          // pid-shaped id in one feed from deleting rows in another
+          source: { in: [...new Set(captures.filter((c) => c.sourceListingId !== undefined).map((c) => c.source))] },
         },
       });
     }

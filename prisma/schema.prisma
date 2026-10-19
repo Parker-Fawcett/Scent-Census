@@ -401,7 +401,11 @@ model UpdateEvent {
   occurredAt  DateTime
   emittedAt   DateTime        @default(now())
   sourceLabel String
+  // optional dedup identity for milestone events; the unique index below
+  // makes concurrent emissions collapse instead of duplicating
+  dedupKey    String?
 
   // feed fetch is "latest for this user"; index serves it, sort at query time
   @@index([userId])
+  @@unique([userId, type, subjectType, subjectId, dedupKey])
 }
