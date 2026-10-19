@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { searchCatalogInDb } from "@/server/catalog";
@@ -10,6 +11,10 @@ interface Params {
 }
 
 async function AddData({ searchParams }: Params) {
+  // Explicit request-time marker (see note in shelf/page.tsx: next-auth's
+  // auth() generates a CSRF random internally on cookie-less requests, which
+  // Cache Components otherwise flags as an unstable prerender value).
+  await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const query = (await searchParams).q ?? "";

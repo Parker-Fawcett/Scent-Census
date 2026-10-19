@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { computeShelfWorth } from "@/server/marketData";
@@ -48,6 +49,16 @@ function BottleCard({ row, summary }: { row: CollectionRow; summary: ShelfSummar
 }
 
 async function ShelfData() {
+  // Explicit request-time marker (Cache Components "dynamic" pattern).
+  // Why it is needed: every auth() call runs next-auth's internal init(),
+  // which generates a fresh CSRF token via crypto random when the request
+  // carries no csrf cookie (first visit, prerender passes). Random values
+  // before any dynamic access are blocked during prerendering, so the
+  // component must declare itself request-time with connection() first.
+  // Empirically confirmed by bisecting the dev insight
+  // "unstable value crypto.getRandomValues()" down to
+  // @auth/core/lib/.../csrf-token.js -> randomString().
+  await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 

@@ -1,10 +1,13 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import OnboardingForm from "./OnboardingForm";
 
 async function OnboardingData() {
+  // Explicit request-time marker: see note in shelf/page.tsx.
+  await connection();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const user = await prisma.user.findUniqueOrThrow({
