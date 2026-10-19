@@ -180,7 +180,7 @@ export function feedScore(candidate: FeedCandidate, inputs: FeedInputs): ScoreBr
     candidate.estimateCentsLow !== null && candidate.estimateCentsHigh !== null
       ? (candidate.estimateCentsLow + candidate.estimateCentsHigh) / 2
       : null;
-  let budgetFit = w.budgetFit.noData;
+  let budgetFit: number = w.budgetFit.noData;
   let budgetWhy = "no confident estimate to judge budget against";
   if (estimate !== null && ceiling !== null) {
     const ratio = estimate / ceiling;
