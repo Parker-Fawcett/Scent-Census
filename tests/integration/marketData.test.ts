@@ -52,6 +52,28 @@ async function seedUser(): Promise<string> {
 }
 
 describe("ingestCaptures", () => {
+  it("refuses a capture whose date does not parse, instead of an Invalid Date insert error", async () => {
+    const fragranceId = await seedFragrance();
+    await expect(
+      ingestCaptures(prisma, [
+        { fragranceId, source: "EBAY_ASKING", priceCents: 9500, capturedAt: "not-a-date", sizeMl: 100 },
+      ]),
+    ).rejects.toThrow(/captured/i);
+  });
+
+  it("refuses a capture with no fragrance id or a future capture date", async () => {
+    await expect(
+      ingestCaptures(prisma, [
+        { fragranceId: "", source: "EBAY_ASKING", priceCents: 9500, capturedAt: daysAgoIso(1), sizeMl: 100 },
+      ]),
+    ).rejects.toThrow(/fragrance/i);
+    const fragranceId = await seedFragrance();
+    await expect(
+      ingestCaptures(prisma, [
+        { fragranceId, source: "EBAY_ASKING", priceCents: 9500, capturedAt: "2099-01-01T00:00:00.000Z", sizeMl: 100 },
+      ]),
+    ).rejects.toThrow(/captured/i);
+  });
   it("persists captures and round-trips them through loadMarketSource", async () => {
     const fragranceId = await seedFragrance();
     const captures: PriceCapture[] = [

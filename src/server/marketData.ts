@@ -32,6 +32,20 @@ export async function ingestCaptures(
           `ingest refused: non-positive or non-integer price ${capture.priceCents} (fragrance ${capture.fragranceId})`,
         );
       }
+      if (capture.fragranceId.trim() === "") {
+        throw new Error("ingest refused: an empty fragrance id (every capture must name its fragrance)");
+      }
+      // an unparseable or future-dated capture would either crash the insert
+      // with an Invalid Date error or poison the staleness window with data
+      // from tomorrow; both are suspect-data situations, so refuse loud
+      if (
+        Number.isNaN(new Date(capture.capturedAt).getTime()) ||
+        new Date(capture.capturedAt).getTime() > Date.now()
+      ) {
+        throw new Error(
+          `ingest refused: capturedAt "${capture.capturedAt}" is unparseable or future-dated (fragrance ${capture.fragranceId})`,
+        );
+      }
     }
     // latest state of each listing wins: delete prior rows by listing id,
     // only when the capture actually named one (samples without ids are

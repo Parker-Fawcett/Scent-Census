@@ -30,6 +30,17 @@ describe("validateAddItem", () => {
     expect(() => validateAddItem({ ...base, sizeMl: -30 })).toThrow(/size/i);
   });
 
+  it("refuses a price paid too large for the database integer column", () => {
+    // int4 top is 2,147,483,647 cents = $21,474,836.47; one cent past it must
+    // fail here as a form error, not at insert as a cryptic Prisma error
+    expect(() =>
+      validateAddItem({ ...base, pricePaidDollars: "21474836.48" }),
+    ).toThrow(/price/i);
+    expect(() =>
+      validateAddItem({ ...base, pricePaidDollars: "99999999999" }),
+    ).toThrow(/price/i);
+  });
+
   it("accepts a price paid as whole dollars and converts to cents", () => {
     expect(validateAddItem({ ...base, pricePaidDollars: "89" }).pricePaidCents).toBe(8900);
     expect(validateAddItem({ ...base, pricePaidDollars: "89.5" }).pricePaidCents).toBe(8950);

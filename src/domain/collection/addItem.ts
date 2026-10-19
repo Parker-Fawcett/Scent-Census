@@ -50,7 +50,13 @@ export function validateAddItem(raw: RawAddItem): ParsedAddItem {
     if (!Number.isFinite(parsed) || parsed < 0) {
       throw new Error(`add item: price paid must be a dollar amount (got "${priceRaw}")`);
     }
-    pricePaidCents = Math.round(parsed * 100);
+    const cents = Math.round(parsed * 100);
+    // the column is Postgres int4 (max 2,147,483,647 cents); an overflow must
+    // fail here as a form error, not at insert as a cryptic Prisma error
+    if (cents > 2_147_483_647) {
+      throw new Error(`add item: price paid is too large (got "${priceRaw}")`);
+    }
+    pricePaidCents = cents;
   }
   let purchasedOn: Date | null = null;
   const dateRaw = raw.purchasedOn;

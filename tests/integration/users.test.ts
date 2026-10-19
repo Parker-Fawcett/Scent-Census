@@ -47,6 +47,27 @@ describe("registerUser", () => {
       registerUser(prisma, { email: email(), password: "" }),
     ).rejects.toThrow(/8 characters/i);
   });
+
+  it("refuses passwords longer than 72 bytes, instead of bcrypt silently truncating them", async () => {
+    // bcrypt only digests the first 72 bytes; accepting an 80-character
+    // password would make character 73..80 decorative and the user misled
+    const long = "a".repeat(73);
+    await expect(
+      registerUser(prisma, { email: email(), password: long }),
+    ).rejects.toThrow(/72/i);
+  });
+
+  it("refuses strings that are not email-shaped", async () => {
+    await expect(
+      registerUser(prisma, { email: "not-an-email", password: "correct horse battery" }),
+    ).rejects.toThrow(/email/i);
+    await expect(
+      registerUser(prisma, { email: "a@b@x", password: "correct horse battery" }),
+    ).rejects.toThrow(/email/i);
+    await expect(
+      registerUser(prisma, { email: "@test.local", password: "correct horse battery" }),
+    ).rejects.toThrow(/email/i);
+  });
 });
 
 describe("verifyCredentials", () => {
