@@ -17,4 +17,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
+      # build-time prerendering instantiates src/config.ts; placeholders here
+      # are honest: they exist to satisfy boot, never to run against a DB
       - run: npm run build
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost/placeholder
+          AUTH_SECRET: build-time-placeholder

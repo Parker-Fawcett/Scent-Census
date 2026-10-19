@@ -15,4 +15,8 @@ function requireEnv(name: string): string {
 export const env = {
   databaseUrl: requireEnv("DATABASE_URL"),
   authSecret: requireEnv("AUTH_SECRET"),
+  // OAuth is optional at boot: missing keys disable the provider instead of
+  // killing the app, but the one requirement (auth secret) stays loud.
+  googleClientId: process.env["GOOGLE_CLIENT_ID"] ?? null,
+  googleClientSecret: process.env["GOOGLE_CLIENT_SECRET"] ?? null,
 } as const;
