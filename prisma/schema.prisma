@@ -22,6 +22,8 @@ enum NotePosition {
   TOP
   HEART
   BASE
+  // community note rows the corpus ships untiered (flat); honest position
+  ANY
 }
 
 enum Concentration {
@@ -168,6 +170,9 @@ model Fragrance {
   house          House          @relation(fields: [houseId], references: [id])
   concentration  Concentration?
   year           Int?
+  // community accord names ordered by vote strength (strongest first);
+  // provenance is the corpus snapshot, so nothing is curated here
+  accords        String[]   @default([])
   discontinued   Boolean        @default(false)
   perfumer       String?
   blindBuyRisk   Float?

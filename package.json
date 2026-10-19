@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:integration": "prisma migrate deploy && vitest run --config vitest.integration.config.ts",
     "seed:catalog": "tsx scripts/seed-catalog.ts --env-file=.env",
+    "ingest:catalog": "npm run ingest:fragrantica --",
+    "ingest:fragrantica": "tsx scripts/ingest-fragrantica.ts --env-file=.env",
     "test:e2e": "DATABASE_URL=postgresql://scent:scent-test@localhost:5545/scent_test npx prisma migrate deploy && playwright test"
   },
   "dependencies": {
