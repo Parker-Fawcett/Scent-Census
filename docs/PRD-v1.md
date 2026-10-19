@@ -281,8 +281,8 @@ Note the mix: three long-form authority channels (Cal, Gents Scents, Cuba Know) 
 
 - **M0** DONE. Decisions: this doc approved, stack memo approved, repo named.
 - **M1** DONE. Domain core red-first (staleness, price honesty, census math, search with accent folding + whitespace discipline, release diffing with duplicate-pid guard), market-source seam with deterministic fake + per-group grouping, FragDB ingest mapper proven against the real 10-row sample fixtures, Prisma schema migrated against local Postgres (dev + test via docker-compose). 64 unit tests, all gates green.
-- **M2** Collection + worth pipeline live against real PricePoint ingestion; staleness rules tested.
-- **M3** Onboarding + shelf UI; empty states; worth summary.
+- **M2** DONE (backend). Worth pipeline proven end to end against real Postgres: shelf worth domain, capture ingestion with listing-state dedupe, live compute path. Real captures wait on eBay keys; the seam is ready. UI lands in M3.
+- **M3** IN PROGRESS. Done: auth (credentials over tested repo), onboarding validation with merge semantics, shelf page with honest worth summary + empty states, add-bottle flow (search over DB catalogue, add action), dev seed from sample fixtures. Pending: Playwright e2e on the real flows.
 - **M4** Votes + feed algorithm + golden fixtures + reason lines.
 - **M5** Product pages with YouTube embeds and price box, clone census (vote UI, rollup job, ranked list with the two confidence levels), follow toggles + update feed, and the creator claim flow (invite → claim → verified → log pickups/reviews).
 - **M6** Catalog seed v1: ~2,000 fragrances (houses ~200) ingested with contract tests on cleaning, including the `inspired_by` edges for the famous clones. Ingest job emits release diffs, which is also the drop-detection source for house follows.
