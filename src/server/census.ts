@@ -10,6 +10,9 @@ import type { CensusBucket, CloneVotePair } from "@/domain/types";
 import { floors } from "@/domain/floors";
 import type { PrismaInstance } from "@/lib/prisma";
 
+// lazy import to avoid circular coupling in test bundles
+import { emitUpdateEvent } from "@/server/follows";
+
 const CLONE_BUCKETS: CensusBucket[] = ["SPOT_ON", "CLOSE", "SIMILAR", "SAME_FAMILY", "NOT_CLOSE"];
 
 export interface PairRollup {
@@ -114,7 +117,11 @@ export async function saveCloneVote(
     throw new Error("census: unknown fragrance on the clone or target side");
   }
 
-  return prisma.$transaction(async (tx) => {
+  // the previous rollup, so the milestone detector can tell a transition
+  // (none -> low, low -> confident) from a same-level vote
+  const previous = await loadPairRollup(prisma, cloneId, targetId);
+
+  const next = await prisma.$transaction(async (tx) => {
     await tx.cloneVote.upsert({
       where: { userId_cloneId_targetId: { userId, cloneId, targetId } },
       create: { userId, cloneId, targetId, bucket: bucket as CensusBucket },
@@ -122,6 +129,56 @@ export async function saveCloneVote(
     });
     return recomputePairRollup(tx, cloneId, targetId);
   });
+
+  // emit a milestone only on a rank-level transition; a same-level vote
+  // would otherwise spam the update strip every vote
+  if (previous === null || previous.rankLevel !== next.rankLevel) {
+    if (next.rankLevel === "low" || next.rankLevel === "confident") {
+      const milestoneLabel = next.rankLevel === "confident" ? "confident" : "low";
+      try {
+        // emission runs after the transaction commits so a follower-side
+        // failure cannot roll back the vote itself
+        await emitUpdateEvent(prisma, {
+          subjectType: "FRAGRANCE",
+          subjectId: targetId,
+          type: "CENSUS_MILESTONE",
+          payload: {
+            cloneId,
+            targetId,
+            rankLevel: next.rankLevel,
+            sampleSize: next.sampleSize,
+            score: next.score,
+            mostCommon: next.mostCommon,
+            dedupKey: `${cloneId}:${targetId}:milestone:${next.rankLevel}`,
+          },
+          sourceLabel: "the community",
+          occurredAt: new Date(),
+          dedupKey: `${cloneId}:${targetId}:milestone:${next.rankLevel}`,
+        });
+        // followers of the clone hear about it too
+        await emitUpdateEvent(prisma, {
+          subjectType: "FRAGRANCE",
+          subjectId: cloneId,
+          type: "CENSUS_MILESTONE",
+          payload: {
+            cloneId,
+            targetId,
+            rankLevel: next.rankLevel,
+            sampleSize: next.sampleSize,
+            score: next.score,
+            mostCommon: next.mostCommon,
+            dedupKey: `${cloneId}:${targetId}:milestone:${next.rankLevel}`,
+          },
+          sourceLabel: "the community",
+          occurredAt: new Date(),
+          dedupKey: `${cloneId}:${targetId}:milestone:${next.rankLevel}`,
+        });
+      } catch (error) {
+        console.error("census milestone emission failed:", error instanceof Error ? error.message : error);
+      }
+    }
+  }
+  return next;
 }
 
 export async function clearCloneVoteForUser(

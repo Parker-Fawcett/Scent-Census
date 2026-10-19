@@ -56,12 +56,12 @@ describe("emitUpdateEvent", () => {
   it("writes one event per follower of the subject, with source label and occurredAt", async () => {
     const follower = await prisma.user.create({ data: { email: `ev-${RUN}@t.example` } });
     const other = await prisma.user.create({ data: { email: `ev2-${RUN}@t.example` } });
-    await toggleFollow(prisma, follower.id, { subjectType: "FRAGRANCE", subjectId: "frag-x" });
-    await toggleFollow(prisma, other.id, { subjectType: "FRAGRANCE", subjectId: "frag-y" });
+    await toggleFollow(prisma, follower.id, { subjectType: "FRAGRANCE", subjectId: `frag-x-${RUN}` });
+    await toggleFollow(prisma, other.id, { subjectType: "FRAGRANCE", subjectId: `frag-y-${RUN}` });
 
     const result = await emitUpdateEvent(prisma, {
       subjectType: "FRAGRANCE",
-      subjectId: "frag-x",
+      subjectId: `frag-x-${RUN}`,
       type: "CENSUS_MILESTONE",
       payload: { sampleSize: 25, rankLevel: "confident" },
       sourceLabel: "the community",
@@ -80,27 +80,27 @@ describe("emitUpdateEvent", () => {
 
   it("never double-emits: a second call with the same dedup key is a no-op", async () => {
     const follower = await prisma.user.create({ data: { email: `dedup-${RUN}@t.example` } });
-    await toggleFollow(prisma, follower.id, { subjectType: "FRAGRANCE", subjectId: "frag-d" });
+    await toggleFollow(prisma, follower.id, { subjectType: "FRAGRANCE", subjectId: `frag-d-${RUN}` });
 
     const first = await emitUpdateEvent(prisma, {
       subjectType: "FRAGRANCE",
-      subjectId: "frag-d",
+      subjectId: `frag-d-${RUN}`,
       type: "CENSUS_MILESTONE",
       payload: { sampleSize: 10, rankLevel: "low" },
       sourceLabel: "the community",
       occurredAt: new Date("2026-10-19T13:00:00.000Z"),
-      dedupKey: "frag-d:milestone:10",
+      dedupKey: `frag-d-${RUN}:milestone:10`,
     });
     expect(first.emitted).toBe(1);
 
     const second = await emitUpdateEvent(prisma, {
       subjectType: "FRAGRANCE",
-      subjectId: "frag-d",
+      subjectId: `frag-d-${RUN}`,
       type: "CENSUS_MILESTONE",
       payload: { sampleSize: 10, rankLevel: "low" },
       sourceLabel: "the community",
       occurredAt: new Date("2026-10-19T13:00:00.000Z"),
-      dedupKey: "frag-d:milestone:10",
+      dedupKey: `frag-d-${RUN}:milestone:10`,
     });
     expect(second.emitted).toBe(0);
     expect(await listUpdateEventsForUser(prisma, follower.id)).toHaveLength(1);
