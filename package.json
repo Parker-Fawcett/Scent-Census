@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "prisma migrate deploy && vitest run --config vitest.integration.config.ts",
-    "seed:catalog": "tsx scripts/seed-catalog.ts --env-file=.env"
+    "seed:catalog": "tsx scripts/seed-catalog.ts --env-file=.env",
+    "test:e2e": "DATABASE_URL=postgresql://scent:scent-test@localhost:5545/scent_test npx prisma migrate deploy && playwright test"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -22,6 +23,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
