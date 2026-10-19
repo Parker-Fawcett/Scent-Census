@@ -84,7 +84,8 @@ model User {
   passwordHash  String?
   // onboarding taste answers (PRD section 7.1); nullable so skipping is legal
   budgetBand    String?
-  buysClones    Boolean?
+  cloneBand     String?
+  accordPrefs   String[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -95,6 +96,47 @@ model User {
   updateEvents    UpdateEvent[]
   catalogueRequests CatalogueRequest[]
   claimedCreator  Creator?
+  accounts        Account[]
+  sessions        Session[]
+}
+
+// Auth.js adapter storage (next-auth v5). Credentials users live in User
+// itself (passwordHash); Google/others land here.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model House {
