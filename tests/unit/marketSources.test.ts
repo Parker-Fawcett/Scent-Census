@@ -115,8 +115,10 @@ describe("estimateFromSource", () => {
       ],
     });
     const groups = estimateFromSource(source, "f1", { now: NOW });
-    expect(groups.find((g) => g.sizeMl === 100).estimate.status).toBe("confident");
-    expect(groups.find((g) => g.sizeMl === 50).estimate.status).toBe("thin");
+    const hundred = groups.find((g) => g.sizeMl === 100);
+    const fifty = groups.find((g) => g.sizeMl === 50);
+    expect(hundred?.estimate.status).toBe("confident");
+    expect(fifty?.estimate.status).toBe("thin");
   });
 
   it("keeps stale captures out of their group's count", () => {
