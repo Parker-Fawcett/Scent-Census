@@ -199,13 +199,10 @@ export function mapFragDBCatalog(inputs: FragDBInputs): FragDBCatalog {
       continue;
     }
     // scalar parsers push their own errors and null out the row on garbage
-    const specs: Array<[Parser<string[] | MappedAccord[] | MappedPyramidNote[]>, number]> = [
-      [parsePerfumers, C.perfumers],
-      [parseAccords, C.accords],
-      [parsePyramid, C.pyramid],
-    ];
-    const parsed = specs.map(([parse, colIdx]) => parse(row[colIdx] ?? "", pid, errors));
-    if (parsed.some((p) => p === null)) continue;
+    const perfumers = parsePerfumers(row[C.perfumers] ?? "", pid, errors);
+    const accords = parseAccords(row[C.accords] ?? "", pid, errors);
+    const pyramid = parsePyramid(row[C.pyramid] ?? "", pid, errors);
+    if (perfumers === null || accords === null || pyramid === null) continue;
     records.push({
       pid,
       name,
@@ -214,9 +211,9 @@ export function mapFragDBCatalog(inputs: FragDBInputs): FragDBCatalog {
       houseName: brand.name,
       year: yearRaw === "" ? null : Number(yearRaw),
       inspiredById: null,
-      perfumers: parsed[0],
-      accords: parsed[1],
-      pyramid: parsed[2],
+      perfumers,
+      accords,
+      pyramid,
     });
   }
   return { records, errors };

@@ -11,6 +11,7 @@ import {
   parseDelimitedCsv,
   toMappedCatalogFragrance,
 } from "../../scripts/ingest/fragdb";
+import type { FragDBCatalog, FragDBInputs, MappedCatalogFragrance } from "../../scripts/ingest/fragdb";
 import { searchCatalog } from "@/domain/catalogSearch";
 
 const samplesDir = join(__dirname, "../../scripts/ingest/samples");
@@ -26,6 +27,20 @@ const rowsToCsv = (rows: string[][]): string =>
 const fragrancesCsv = () => read("fragrances.csv");
 const accordsCsv = () => read("accords.csv");
 const notesCsv = () => read("notes.csv");
+
+const inputs = (): FragDBInputs => ({
+  fragrancesCsv: fragrancesCsv(),
+  notesCsv: notesCsv(),
+  accordsCsv: accordsCsv(),
+});
+
+const sample = (): FragDBCatalog => mapFragDBCatalog(inputs());
+
+const byPid = (records: MappedCatalogFragrance[], pid: string): MappedCatalogFragrance => {
+  const record = records.find((r) => r.pid === pid);
+  if (!record) throw new Error(`fixture lost pid ${pid}: fix the mapper, not this test`);
+  return record;
+};
 
 describe("parseDelimitedCsv", () => {
   it("preserves quoted fields containing delimiters and escaped quotes", () => {
@@ -50,22 +65,14 @@ describe("parseDelimitedCsv", () => {
 
 describe("mapFragDBCatalog", () => {
   it("maps the real sample with zero errors and keeps pids unique", () => {
-    const catalog = mapFragDBCatalog({
-      fragrancesCsv: fragrancesCsv(),
-      notesCsv: notesCsv(),
-      accordsCsv: accordsCsv(),
-    });
+    const catalog = sample();
     expect(catalog.errors).toEqual([]);
     expect(catalog.records).toHaveLength(10);
     expect(new Set(catalog.records.map((r) => r.pid)).size).toBe(10);
   });
 
   it("maps Light Blue: house from the row's own brand cell", () => {
-    const lb = mapFragDBCatalog({
-      fragrancesCsv: fragrancesCsv(),
-      notesCsv: notesCsv(),
-      accordsCsv: accordsCsv(),
-    }).records.find((r) => r.pid === "485");
+    const lb = byPid(sample().records, "485");
     expect(lb).toBeDefined();
     expect(lb.name).toBe("Light Blue");
     expect(lb.housePid).toBe("b72");
@@ -75,20 +82,12 @@ describe("mapFragDBCatalog", () => {
   });
 
   it("keeps accord pids with their 0..100 strength", () => {
-    const lb = mapFragDBCatalog({
-      fragrancesCsv: fragrancesCsv(),
-      notesCsv: notesCsv(),
-      accordsCsv: accordsCsv(),
-    }).records.find((r) => r.pid === "485");
+    const lb = byPid(sample().records, "485");
     expect(lb.accords[0]).toEqual({ accordPid: "a24", strength: 100 });
   });
 
   it("parses pyramid positions with opacity and raw weight", () => {
-    const lb = mapFragDBCatalog({
-      fragrancesCsv: fragrancesCsv(),
-      notesCsv: notesCsv(),
-      accordsCsv: accordsCsv(),
-    }).records.find((r) => r.pid === "485");
+    const lb = byPid(sample().records, "485");
     const top = lb.pyramid.filter((n) => n.position === "TOP");
     expect(top).toContainEqual({
       position: "TOP",
@@ -101,31 +100,19 @@ describe("mapFragDBCatalog", () => {
   });
 
   it("drops the exact-duplicate pyramid entry FragDB emits", () => {
-    const lb = mapFragDBCatalog({
-      fragrancesCsv: fragrancesCsv(),
-      notesCsv: notesCsv(),
-      accordsCsv: accordsCsv(),
-    }).records.find((r) => r.pid === "485");
+    const lb = byPid(sample().records, "485");
     // source has n1985,0.93,3.48 listed twice in the top segment
     const n1985 = lb.pyramid.filter((n) => n.position === "TOP" && n.notePid === "n1985");
     expect(n1985).toHaveLength(1);
   });
 
   it("resolves perfumer pids that ride along in the row", () => {
-    const lb = mapFragDBCatalog({
-      fragrancesCsv: fragrancesCsv(),
-      notesCsv: notesCsv(),
-      accordsCsv: accordsCsv(),
-    }).records.find((r) => r.pid === "485");
+    const lb = byPid(sample().records, "485");
     expect(lb.perfumers).toEqual(["p39"]);
   });
 
   it("never invents clone edges: inspiredById is null everywhere", () => {
-    const records = mapFragDBCatalog({
-      fragrancesCsv: fragrancesCsv(),
-      notesCsv: notesCsv(),
-      accordsCsv: accordsCsv(),
-    }).records;
+    const records = sample().records;
     expect(records.every((r) => r.inspiredById === null)).toBe(true);
   });
 
@@ -158,6 +145,7 @@ describe("mapFragDBCatalog", () => {
     });
     expect(catalog.records.map((r) => r.pid)).not.toContain("777");
     const err = catalog.errors.find((e) => e.pid === "777");
+    if (!err) throw new Error("no error recorded for the broken pyramid row");
     expect(err.message).toMatch(/pyramid/i);
   });
 
@@ -173,7 +161,9 @@ describe("mapFragDBCatalog", () => {
       accordsCsv: accordsCsv(),
     });
     expect(catalog.records.map((r) => r.pid)).not.toContain("888");
-    expect(catalog.errors.find((e) => e.pid === "888").message).toMatch(/year/i);
+    const yearErr = catalog.errors.find((e) => e.pid === "888");
+    if (!yearErr) throw new Error("no error recorded for the bad year row");
+    expect(yearErr.message).toMatch(/year/i);
   });
 
   it("fails the row loud on an accord token without a 0..100 strength", () => {
@@ -187,18 +177,16 @@ describe("mapFragDBCatalog", () => {
       notesCsv: notesCsv(),
       accordsCsv: accordsCsv(),
     });
-    expect(catalog.errors.find((e) => e.pid === "999").message).toMatch(/accord/i);
+    const accordErr = catalog.errors.find((e) => e.pid === "999");
+    if (!accordErr) throw new Error("no error recorded for the bad accord row");
+    expect(accordErr.message).toMatch(/accord/i);
   });
 });
 
 describe("toMappedCatalogFragrance", () => {
   it("feeds mapped records straight into the domain search seam", () => {
-    const { records } = mapFragDBCatalog({
-      fragrancesCsv: fragrancesCsv(),
-      notesCsv: notesCsv(),
-      accordsCsv: accordsCsv(),
-    });
-    const lb = records.find((r) => r.pid === "485");
+    const { records } = sample();
+    const lb = byPid(records, "485");
     const catalogFragrance = toMappedCatalogFragrance(lb, {
       id: "b72",
       name: "Dolce&Gabbana",
