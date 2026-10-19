@@ -196,6 +196,10 @@ model Fragrance {
   cloneVotesAsTarget CloneVote[]       @relation("CloneVoteTarget")
   rollupsAsClone    CloneRollup[]      @relation("RollupClone")
   rollupsAsTarget   CloneRollup[]      @relation("RollupTarget")
+  // curated census coverage: EVERY approved clone-of pair (a famous clone
+  // shares neighborhood comparisons), canon stays on inspiredById above
+  inspiredEdgesAsClone  InspiredByEdge[] @relation("InspiredEdgeClone")
+  inspiredEdgesAsTarget InspiredByEdge[] @relation("InspiredEdgeTarget")
 }
 
 model FragranceNote {
@@ -322,6 +326,21 @@ model CloneRollup {
   isStale    Boolean   @default(false)
 
   @@unique([cloneId, targetId])
+}
+
+// Curated census coverage: one row per approved clone->original pair. The
+// canon edge (inspiredById) stays single-valued for display and the feed
+// pools; this table carries the full neighborhood so a target's census lists
+// every clone the curation approves, not only one flagship.
+model InspiredByEdge {
+  cloneId   String
+  clone     Fragrance @relation("InspiredEdgeClone", fields: [cloneId], references: [id], onDelete: Cascade)
+  targetId  String
+  target    Fragrance @relation("InspiredEdgeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@id([cloneId, targetId])
+  @@index([targetId])
 }
 
 // Creator accounts are claim-based (PRD section 7.7): we invite, they claim.

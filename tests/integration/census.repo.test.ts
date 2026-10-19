@@ -175,7 +175,35 @@ describe("clearCloneVoteForUser", () => {
   });
 });
 
-describe("loadRankedClones", () => {
+describe("loadRankedClones (curated edges)", () => {
+  it("includes curated clones that have no votes yet", async () => {
+    const seedCorpus = async (pid: string, name: string): Promise<{ id: string }> => {
+      const house = await prisma.house.upsert({
+        where: { slug: "curation-test-house" },
+        create: { name: "Curation Test House", slug: "curation-test-house", tier: "DESIGNER" },
+        update: {},
+      });
+      return prisma.fragrance.upsert({
+        where: { slug: `${pid}-${RUN}` },
+        create: { name, slug: `${pid}-${RUN}`, houseId: house.id, year: 2021, accords: [] },
+        update: {},
+      });
+    };
+    const target = await seedCorpus("cur-ranked-target", "Ranked Target U");
+    const canon = await seedCorpus("cur-ranked-canon", "Ranked Canon U");
+    const edgeOnly = await seedCorpus("cur-ranked-edge", "Ranked Edge U");
+    await prisma.fragrance.update({ where: { id: target.id }, data: { catalogueSourcePid: `fragrantica-rt${RUN}` } });
+    await prisma.fragrance.update({ where: { id: canon.id }, data: { catalogueSourcePid: `fragrantica-rc${RUN}`, inspiredById: target.id } });
+    await prisma.fragrance.update({ where: { id: edgeOnly.id }, data: { catalogueSourcePid: `fragrantica-re${RUN}` } });
+    await prisma.inspiredByEdge.create({ data: { cloneId: edgeOnly.id, targetId: target.id } });
+
+    const ranked = await loadRankedClones(prisma, target.id);
+    const names = ranked.map((r) => r.cloneName);
+    expect(names).toContain("Ranked Canon U");
+    expect(names).toContain("Ranked Edge U");
+    expect(ranked.find((r) => r.cloneName === "Ranked Edge U")!.sampleSize).toBe(0);
+    expect(ranked.find((r) => r.cloneName === "Ranked Edge U")!.rankLevel).toBe("none");
+  });
   it("orders by the domain rules: rank level first, then score, ties stable and alphabetical", async () => {
     const target = await seedFrag("census-target-rank", "Ranked Target");
     const strong = await seedFrag("census-clone-zeta", "Zeta Clone");

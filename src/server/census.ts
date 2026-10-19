@@ -224,7 +224,12 @@ export async function loadRankedClones(
   // curated edges without any vote yet join the list as explicitly unranked
   // (sampleSize 0) rather than vanishing: the census shows its own blanks
   const curated = await prisma.fragrance.findMany({
-    where: { inspiredById: targetId },
+    where: {
+      OR: [
+        { inspiredById: targetId },
+        { inspiredEdgesAsClone: { some: { targetId } } },
+      ],
+    },
     select: {
       id: true,
       slug: true,

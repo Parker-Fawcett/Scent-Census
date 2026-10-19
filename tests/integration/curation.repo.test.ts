@@ -41,7 +41,7 @@ async function seedCorpus(pid: string, name: string): Promise<{ id: string }> {
 }
 
 describe("loadApprovedCloneEdges", () => {
-  it("links an approved pair through the corpus pid and is idempotent on rerun", async () => {
+  it("links an approved pair through the corpus pid, records the census edge, is idempotent on rerun", async () => {
     const clone = await seedCorpus("cur-clone", "Curated Clone One");
     const target = await seedCorpus("cur-target", "Curated Target One");
     // the corpus ingest stores catalogueSourcePid like "fragrantica-<fid>"
@@ -52,17 +52,42 @@ describe("loadApprovedCloneEdges", () => {
       { cloneFid: `9811${RUN}`, targetFid: `9007${RUN}`, note: "hand-checked" },
     ]);
     expect(summary.applied).toBe(1);
+    expect(summary.edgesLinked).toBe(1);
 
     const row = await prisma.fragrance.findUniqueOrThrow({ where: { id: clone.id } });
     expect(row.inspiredById).toBe(target.id);
+    expect(await prisma.inspiredByEdge.count({ where: { cloneId: clone.id, targetId: target.id } })).toBe(1);
 
     const again = await loadApprovedCloneEdges(prisma, [
       { cloneFid: `9811${RUN}`, targetFid: `9007${RUN}`, note: "hand-checked" },
     ]);
     expect(again.applied).toBe(0);
     expect(again.alreadyLinked).toBe(1);
+    expect(again.edgesLinked).toBe(0);
     const row2 = await prisma.fragrance.findUniqueOrThrow({ where: { id: clone.id } });
     expect(row2.inspiredById).toBe(target.id);
+  });
+
+  it("two clones of one target both reach the census universe through the edge table", async () => {
+    const target = await seedCorpus("cur-multi-target", "Multi Target");
+    const a = await seedCorpus("cur-multi-a", "Multi Clone A");
+    const b = await seedCorpus("cur-multi-b", "Multi Clone B");
+    await prisma.fragrance.update({ where: { id: target.id }, data: { catalogueSourcePid: `fragrantica-t${RUN}` } });
+    await prisma.fragrance.update({ where: { id: a.id }, data: { catalogueSourcePid: `fragrantica-m1${RUN}` } });
+    await prisma.fragrance.update({ where: { id: b.id }, data: { catalogueSourcePid: `fragrantica-m2${RUN}` } });
+
+    const summary = await loadApprovedCloneEdges(prisma, [
+      { cloneFid: `m1${RUN}`, targetFid: `t${RUN}` },
+      { cloneFid: `m2${RUN}`, targetFid: `t${RUN}` },
+    ]);
+    expect(summary.applied).toBe(2);
+    expect(summary.edgesLinked).toBe(2);
+    // canon is single-valued per clone; the census universe per target holds
+    // BOTH clones, unranked until the community votes
+    const canonA = await prisma.fragrance.findUniqueOrThrow({ where: { id: a.id } });
+    const canonB = await prisma.fragrance.findUniqueOrThrow({ where: { id: b.id } });
+    expect(canonA.inspiredById).toBe(target.id);
+    expect(canonB.inspiredById).toBe(target.id);
   });
 
   it("refuses to silently overwrite an existing edge; replace requires the flag", async () => {
@@ -90,7 +115,7 @@ describe("loadApprovedCloneEdges", () => {
     expect(moved.inspiredById).toBe(other.id);
   });
 
-  it("an alternate pair is counted and resolved but never linked", async () => {
+  it("an alternate pair records the census edge but never touches the canon column", async () => {
     const clone = await seedCorpus("cur-clone-alt", "Alternate Clone");
     const target = await seedCorpus("cur-t-alt", "Alternate Target");
     await prisma.fragrance.update({ where: { id: clone.id }, data: { catalogueSourcePid: `fragrantica-alt${RUN}` } });
@@ -101,6 +126,9 @@ describe("loadApprovedCloneEdges", () => {
     ]);
     expect(summary.alternates).toBe(1);
     expect(summary.applied).toBe(0);
+    // coverage without canon: the pair is votable in the census universe, the
+    // clone's displayed inspiration stays untouched
+    expect(await prisma.inspiredByEdge.count({ where: { cloneId: clone.id, targetId: target.id } })).toBe(1);
     const row = await prisma.fragrance.findUniqueOrThrow({ where: { id: clone.id } });
     expect(row.inspiredById).toBeNull();
   });
