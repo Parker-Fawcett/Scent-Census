@@ -26,8 +26,9 @@ const email = () => `${crypto.randomUUID()}@test.local`;
 describe("registerUser", () => {
   it("creates a credentials user with a bcrypt hash that verifies", async () => {
     const user = await registerUser(prisma, { email: email(), password: "correct horse battery" });
-    expect(user.passwordHash).toBeTruthy();
-    expect(user.passwordHash.includes("correct horse")).toBe(false);
+    const hash = user.passwordHash;
+    if (!hash) throw new Error("credentials user must carry a password hash");
+    expect(hash.includes("correct horse")).toBe(false);
   });
 
   it("rejects duplicate emails loud, whatever the casing", async () => {
@@ -41,10 +42,10 @@ describe("registerUser", () => {
   it("refuses weak and empty passwords", async () => {
     await expect(
       registerUser(prisma, { email: email(), password: "short" }),
-    ).rejects.toThrow(/eight/i);
+    ).rejects.toThrow(/8 characters/i);
     await expect(
       registerUser(prisma, { email: email(), password: "" }),
-    ).rejects.toThrow(/eight/i);
+    ).rejects.toThrow(/8 characters/i);
   });
 });
 
