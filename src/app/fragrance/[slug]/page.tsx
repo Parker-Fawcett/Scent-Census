@@ -16,8 +16,8 @@ import type { CensusBucket } from "@/domain/types";
 import { floors } from "@/domain/floors";
 import { estimateFromSource } from "@/domain/marketSources";
 import { loadMarketSource } from "@/server/marketData";
-import { loadPairRollup, loadRankedClones, type PairRollup } from "@/server/census";
-import { clearCloneVoteAction, cloneCensusVoteAction } from "./censusActions";
+import { loadPairRollup, loadRankedClones } from "@/server/census";
+import { clearCloneVoteAction, cloneCensusVoteAction, toggleFollowAction } from "./censusActions";
 
 const cents = (value: number): string => `$${(value / 100).toFixed(2)}`;
 
@@ -70,20 +70,10 @@ function VoteButtons({ slug, cloneId, targetId, current }: {
   );
 }
 
-function RollupLine({ rollup }: {
-  rollup: {
-    sampleSize: number;
-    score: number;
-    rankLevel?: PairRollup["rankLevel"];
-    mostCommon?: CensusBucket | null;
-  };
-}) {
-  // raw CloneRollup rows (community pairs) carry sampleSize only; the
-  // rank level becomes "Unranked" unless the caller derived more, and the
-  // honest label still shows the vote count this line was built from
+function RollupLine({ rollup }: { rollup: { sampleSize: number; score: number; rankLevel?: string; mostCommon?: string | null } }) {
   const sampleSize = rollup.sampleSize;
-  const rankLevel = rollup.rankLevel ?? (sampleSize >= floors.census.confidentVotes ? "confident" : sampleSize >= floors.census.lowConfidenceVotes ? "low" : "none");
-  const mostCommon = rollup.mostCommon ?? null;
+  const rankLevel = (rollup.rankLevel ?? (sampleSize >= floors.census.confidentVotes ? "confident" : sampleSize >= floors.census.lowConfidenceVotes ? "low" : "none")) as "none" | "low" | "confident";
+  const mostCommon = (rollup.mostCommon ?? null) as CensusBucket | null;
   return (
     <>
       <span>{sampleSize === 1 ? "1 vote" : `${sampleSize} votes`}</span>
@@ -138,6 +128,12 @@ async function ProductData({ params }: { params: Promise<{ slug: string }> }) {
       : null
   )?.bucket as CensusBucket | undefined;
 
+  const isFollowing = viewerId
+    ? (await prisma.follow.findUnique({
+        where: { userId_subjectType_subjectId: { userId: viewerId, subjectType: "FRAGRANCE", subjectId: fragrance.id } },
+      })) !== null
+    : false;
+
   // market data: every fresh (source, size) group, no blending ever (PRD 8)
   const source = await loadMarketSource(prisma, [fragrance.id]);
   const groups = estimateFromSource(source, fragrance.id, { now: new Date() }).filter((g) => g.estimate.status !== "none");
@@ -150,6 +146,14 @@ async function ProductData({ params }: { params: Promise<{ slug: string }> }) {
         {fragrance.year ? ` · ${fragrance.year}` : ""}
         {fragrance.perfumer ? ` · ${fragrance.perfumer}` : ""}
       </p>
+      <form action={toggleFollowAction} style={{ margin: "0.5rem 0" }}>
+        <input type="hidden" name="slug" value={slug} />
+        <input type="hidden" name="subjectType" value="FRAGRANCE" />
+        <input type="hidden" name="subjectId" value={fragrance.id} />
+        <button type="submit" style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}>
+          {isFollowing ? "Following" : "Follow"}
+        </button>
+      </form>
       {fragrance.accords.length > 0 ? (
         <p style={{ fontSize: "0.85rem", color: "#666" }}>accords: {fragrance.accords.join(", ")}</p>
       ) : null}

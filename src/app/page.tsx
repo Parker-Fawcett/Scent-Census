@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildFeedPage } from "@/server/feed";
+import { listUpdateEventsForUser } from "@/server/follows";
 import { morePicksAction, voteAction } from "./feedActions";
 
 const primaryButton = {
@@ -34,6 +35,7 @@ export default async function Home({
   // the Suspense boundary, and the data component awaits it inside
   return (
     <Suspense fallback={<main style={{ maxWidth: 720, margin: "3rem auto", padding: "0 1rem" }}>Loading your feed...</main>}>
+      <UpdatesData />
       <HomeContent searchParams={searchParams} />
     </Suspense>
   );
@@ -42,6 +44,42 @@ export default async function Home({
 // Why Connection: auth() triggers next-auth's CSRF random on every
 // cookie-less prerender, which Cache Components blocks (bisected in M3). The
 // split data component + connection() keeps the prerender honest.
+async function UpdatesData() {
+  await connection();
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  const events = await listUpdateEventsForUser(prisma, session.user.id, 12);
+  if (events.length === 0) return null;
+  const fragranceIds = events
+    .filter((e) => e.subjectType === "FRAGRANCE")
+    .map((e) => e.subjectId);
+  const frags = fragranceIds.length > 0
+    ? await prisma.fragrance.findMany({ where: { id: { in: fragranceIds } }, select: { id: true, name: true, slug: true } })
+    : [];
+  const byId = new Map(frags.map((f) => [f.id, f]));
+  return (
+    <section style={{ margin: "1rem 0", padding: "0.75rem", border: "1px solid #eee", borderRadius: 6 }}>
+      <h2 style={{ margin: 0, fontSize: "1rem" }}>Updates</h2>
+      <ul style={{ padding: 0, listStyle: "none", margin: "0.5rem 0 0" }}>
+        {events.map((event) => {
+          const frag = event.subjectType === "FRAGRANCE" ? byId.get(event.subjectId) : null;
+          return (
+            <li key={event.id} style={{ padding: "0.4rem 0", borderBottom: "1px solid #f2f2f2" }}>
+              <strong>{event.type.replace(/_/g, " ").toLowerCase()}</strong>
+              {" · "}
+              {frag ? <Link href={`/fragrance/${frag.slug}`}>{frag.name}</Link> : event.subjectId}
+              {" · "}
+              <span style={{ color: "#777", fontSize: "0.8rem" }}>
+                {event.occurredAt.toISOString().slice(0, 10)} · {event.sourceLabel}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 async function HomeContent({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   await connection();
   const requested = Number((await searchParams).page ?? "1");
