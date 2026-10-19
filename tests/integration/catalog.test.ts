@@ -6,8 +6,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createPrismaClient, type PrismaInstance } from "@/lib/prisma";
 import { importCatalogRecords, searchCatalogInDb } from "@/server/catalog";
-import { mapFragDBCatalog } from "../../scripts/ingest/fragdb";
-import type { MappedCatalogFragrance } from "../../scripts/ingest/fragdb";
+import { mapFragDBCatalog } from "../../src/ingest/fragdb";
+import type { MappedCatalogFragrance } from "../../src/ingest/fragdb";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -62,7 +62,7 @@ describe("importCatalogRecords", () => {
   });
 
   it("searches the real sample: the full mapper output lands and gets found", async () => {
-    const samples = join(__dirname, "../../scripts/ingest/samples");
+    const samples = join(__dirname, "../../fixtures/fragdb-samples");
     const catalog = mapFragDBCatalog({
       fragrancesCsv: readFileSync(join(samples, "fragrances.csv"), "utf8"),
       notesCsv: readFileSync(join(samples, "notes.csv"), "utf8"),

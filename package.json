@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:integration": "prisma migrate deploy && vitest run --config vitest.integration.config.ts"
+    "test:integration": "prisma migrate deploy && vitest run --config vitest.integration.config.ts",
+    "seed:catalog": "tsx scripts/seed-catalog.ts --env-file=.env"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -27,6 +28,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "prisma": "^6.19.3",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^4.1.12"
   },

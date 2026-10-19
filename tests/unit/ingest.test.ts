@@ -1,5 +1,5 @@
 // M1 ingest contract tests, run against the COMMITTED REAL FragDB sample
-// files (scripts/ingest/samples). FragDB ships pipe-delimited RFC4180 CSVs:
+// files (tests/fixtures/fragdb-samples). FragDB ships pipe-delimited RFC4180 CSVs:
 // descriptions contain literal pipes, commas, and quotes inside quoted fields,
 // so the parser and mapper are proven against the real shape, not a fantasy.
 
@@ -10,11 +10,11 @@ import {
   mapFragDBCatalog,
   parseDelimitedCsv,
   toMappedCatalogFragrance,
-} from "../../scripts/ingest/fragdb";
-import type { FragDBCatalog, FragDBInputs, MappedCatalogFragrance } from "../../scripts/ingest/fragdb";
+} from "../../src/ingest/fragdb";
+import type { FragDBCatalog, FragDBInputs, MappedCatalogFragrance } from "../../src/ingest/fragdb";
 import { searchCatalog } from "@/domain/catalogSearch";
 
-const samplesDir = join(__dirname, "../../scripts/ingest/samples");
+const samplesDir = join(__dirname, "../../fixtures/fragdb-samples");
 const read = (name: string) => readFileSync(join(samplesDir, name), "utf8");
 
 // Re-serialize parsed rows with RFC4180 quoting forced on every field, so

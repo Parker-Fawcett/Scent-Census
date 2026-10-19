@@ -176,7 +176,7 @@ model Fragrance {
   inspiredBy     Fragrance?     @relation("CloneOf", fields: [inspiredById], references: [id])
   inspiredClones Fragrance[]    @relation("CloneOf")
   // stable FragDB pid for release diffs and refresh joins
-  catalogueSourcePid String?
+  catalogueSourcePid String? @unique
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 

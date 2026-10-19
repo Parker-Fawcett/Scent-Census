@@ -1,5 +1,6 @@
 // FragDB -> Scent Census mapping (M1 ingest contract). Source of the shape:
-// scripts/ingest/samples (real FragDB sample files, committed). The mapper is
+// tests/fixtures/fragdb-samples (real FragDB sample files, committed). The
+// mapper is
 // pure: file contents in, records plus collected errors out. It validates
 // STRUCTURE (id shapes, numeric ranges, pyramid labels) and fails loud on
 // garbage, but does NOT attempt referential resolution: note/accord/perfumer
