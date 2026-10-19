@@ -16,6 +16,7 @@ import type { CensusBucket } from "@/domain/types";
 import { floors } from "@/domain/floors";
 import { estimateFromSource } from "@/domain/marketSources";
 import { loadMarketSource } from "@/server/marketData";
+import { listCreatorPickupsForFragrance } from "@/server/creators";
 import { loadPairRollup, loadRankedClones } from "@/server/census";
 import { clearCloneVoteAction, cloneCensusVoteAction, toggleFollowAction } from "./censusActions";
 
@@ -137,6 +138,8 @@ async function ProductData({ params }: { params: Promise<{ slug: string }> }) {
   // market data: every fresh (source, size) group, no blending ever (PRD 8)
   const source = await loadMarketSource(prisma, [fragrance.id]);
   const groups = estimateFromSource(source, fragrance.id, { now: new Date() }).filter((g) => g.estimate.status !== "none");
+
+  const videoReviews = await listCreatorPickupsForFragrance(prisma, fragrance.id);
 
   return (
     <section>
@@ -266,7 +269,25 @@ async function ProductData({ params }: { params: Promise<{ slug: string }> }) {
 
       <section>
         <h3>Video reviews</h3>
-        <p>No creator-logged reviews yet. Videos appear here only when a verified creator posts the link; nothing is mirrored or scraped from channels.</p>
+        {videoReviews.length === 0 ? (
+          <p>No creator-logged reviews yet. Videos appear here only when a verified creator posts the link; nothing is mirrored or scraped from channels.</p>
+        ) : (
+          <ul style={{ padding: 0, listStyle: "none" }}>
+            {videoReviews.map((review) => (
+              <li key={review.id} style={{ padding: "0.4rem 0", borderBottom: "1px solid #eee" }}>
+                <a href={review.url} target="_blank" rel="noopener noreferrer">
+                  {review.title ?? review.url}
+                </a>
+                {" · "}
+                <Link href={`/creator/${review.creatorSlug}`}>{review.creatorName}</Link>
+                {" · "}
+                <span style={{ color: "#777", fontSize: "0.8rem" }}>
+                  {review.kind} · {review.createdAt.toISOString().slice(0, 10)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </section>
   );

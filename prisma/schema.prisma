@@ -194,6 +194,7 @@ model Fragrance {
   estimate          FragranceEstimate?
   cloneVotesAsClone CloneVote[]        @relation("CloneVoteClone")
   cloneVotesAsTarget CloneVote[]       @relation("CloneVoteTarget")
+  creatorPickups    CreatorPickup[]
   rollupsAsClone    CloneRollup[]      @relation("RollupClone")
   rollupsAsTarget   CloneRollup[]      @relation("RollupTarget")
   // curated census coverage: EVERY approved clone-of pair (a famous clone
@@ -356,6 +357,8 @@ model Creator {
   bio         String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  pickups     CreatorPickup[]
 }
 
 model Follow {
@@ -370,6 +373,21 @@ model Follow {
 
   @@unique([userId, subjectType, subjectId])
   @@index([subjectType, subjectId])
+}
+
+model CreatorPickup {
+  id          String   @id @default(cuid())
+  creatorId   String
+  creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  fragranceId String
+  fragrance   Fragrance @relation(fields: [fragranceId], references: [id])
+  kind        String   @default("review") // review | pickup
+  url         String
+  title       String?
+  createdAt   DateTime @default(now())
+
+  @@index([fragranceId])
+  @@index([creatorId])
 }
 
 model UpdateEvent {
