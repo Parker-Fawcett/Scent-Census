@@ -43,7 +43,7 @@ export function validateAddItem(raw: RawAddItem): ParsedAddItem {
   let pricePaidCents: number | null = null;
   const priceRaw = raw.pricePaidDollars;
   if (priceRaw !== undefined && priceRaw !== null && String(priceRaw).trim() !== "") {
-    if (typeof priceRaw === "number" ? !Number.isFinite(priceRaw) : true) {
+    if (typeof priceRaw === "number" && !Number.isFinite(priceRaw)) {
       throw new Error(`add item: price paid must be a dollar amount (got "${priceRaw}")`);
     }
     const parsed = Number(String(priceRaw));
