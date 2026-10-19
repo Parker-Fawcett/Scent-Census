@@ -26,6 +26,8 @@ export interface FeedCandidate {
   inspiredById: string | null;
   estimateCentsLow: number | null;
   estimateCentsHigh: number | null;
+  // optional: purely presentational, the algorithm never uses it
+  year?: number | null;
 }
 
 export interface FeedShelfItem {

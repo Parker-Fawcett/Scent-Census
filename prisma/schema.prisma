@@ -93,6 +93,8 @@ model User {
 
   collectionItems CollectionItem[]
   votes           Vote[]
+  // last shown feed page (PRD 7.3 back-to-back rule); one state per user
+  feedPageState   FeedPageState?
   cloneVotes      CloneVote[]
   follows         Follow[]
   updateEvents    UpdateEvent[]
@@ -206,6 +208,17 @@ model FragranceNote {
   weight      Float     @default(0.5)
 
   @@id([fragranceId, noteId, position])
+}
+
+// What the user last saw on their feed page: fragranceId -> reason slug, so
+// the PRD 7.3 rule (no fragrance back-to-back with the same reason across
+// pages) survives reloads without client-side state.
+model FeedPageState {
+  userId        String   @id
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shownRecently Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model CatalogueRequest {
