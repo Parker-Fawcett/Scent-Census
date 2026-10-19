@@ -76,4 +76,24 @@ describe("estimateFragrancePrice", () => {
     const estimate = estimateFragrancePrice([oldish], { now: NOW, staleDays: 10, minSample: 1 });
     expect(estimate.status).toBe("none");
   });
+
+  it("refuses to blend sources into one mean (retail MSRP would poison eBay asking)", () => {
+    const ebay = point(5000, 10);
+    const retail: PriceCapture = {
+      ...ebay,
+      source: "RETAIL_FEED",
+      capturedAt: new Date(NOW.getTime() - 11 * 60_000).toISOString(),
+    };
+    expect(() => estimateFragrancePrice([ebay, retail], { now: NOW, minSample: 12 })).toThrow(
+      /mixing sources/,
+    );
+  });
+
+  it("refuses to blend bottle sizes into one range (30ml and 100ml asks are not one market)", () => {
+    const p100 = point(5000, 10);
+    const p30: PriceCapture = { ...p100, sizeMl: 30 };
+    expect(() => estimateFragrancePrice([p100, p30], { now: NOW, minSample: 12 })).toThrow(
+      /mixing bottle sizes/,
+    );
+  });
 });

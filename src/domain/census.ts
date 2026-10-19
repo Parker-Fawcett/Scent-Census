@@ -35,6 +35,17 @@ export function upsertCloneVote(votes: CloneVotePair[], vote: CloneVotePair): Cl
   return [...filtered, vote];
 }
 
+/** PRD 7.6: every vote is revisable, including un-voting a pair entirely. */
+export function clearCloneVote(
+  votes: CloneVotePair[],
+  userId: string,
+  cloneId: string,
+  targetId: string,
+): CloneVotePair[] {
+  void votes; void userId; void cloneId; void targetId;
+  throw new Error("not implemented: clearCloneVote");
+}
+
 function trimmedMean(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
   if (sorted.length < 10) {

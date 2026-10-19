@@ -72,4 +72,13 @@ describe("searchCatalog", () => {
     expect(searchCatalog(many, "sauvage")).toHaveLength(20);
     expect(searchCatalog(many, "sauvage", { limit: 3 })).toHaveLength(3);
   });
+
+  it("matches accented names when the user types without accents", () => {
+    const accented = [
+      frag("c", "Céline Pour Homme", house("celine", "Céline")),
+      frag("r", "Généralement Frais", house("f", "Fraîche")),
+    ];
+    expect(searchCatalog(accented, "celine")).toHaveLength(1);
+    expect(searchCatalog(accented, "generalement")).toHaveLength(1);
+  });
 });

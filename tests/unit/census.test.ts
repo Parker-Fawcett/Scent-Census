@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { BUCKET_VALUES, compareClones, rollupCensus, upsertCloneVote } from "@/domain/census";
+import {
+  BUCKET_VALUES,
+  clearCloneVote,
+  compareClones,
+  rollupCensus,
+  upsertCloneVote,
+} from "@/domain/census";
 import type { CloneVotePair } from "@/domain/types";
 
 const uid = (n: number) => `u${n}`;
@@ -98,5 +104,34 @@ describe("compareClones", () => {
     expect(compareClones(unranked, ranked)).toBe("b");
     expect(compareClones(ranked, unranked)).toBe("a");
     expect(compareClones(unranked, unranked)).toBe("tied");
+  });
+});
+
+describe("clearCloneVote", () => {
+  it("removes one user's vote on a pair without touching anyone else's", () => {
+    const votes = [vote(uid(1), "CLOSE"), vote(uid(2), "SIMILAR"), vote(uid(1), "SAME_FAMILY")];
+    const after = clearCloneVote(votes, "u1", "clone", "target");
+    expect(after).toHaveLength(1);
+    expect(after[0].userId).toBe("u2");
+  });
+
+  it("does nothing when the user never voted on this pair", () => {
+    const votes = [vote(uid(1), "CLOSE")];
+    const after = clearCloneVote(votes, "u9", "clone", "target");
+    expect(after).toHaveLength(1);
+  });
+});
+
+describe("rollupCensus determinism", () => {
+  it("picks the most common bucket independent of vote arrival order, even on ties", () => {
+    // same tie multiset (1 CLOSE, 1 SIMILAR), either order; the label must not
+    // follow which bucket happened to arrive first
+    const orderA = ["CLOSE", "SIMILAR"] as const;
+    const orderB = ["SIMILAR", "CLOSE"] as const;
+    const fromOrder = (order: readonly ("CLOSE" | "SIMILAR")[]) =>
+      order.map((b, i) => vote(uid(i), b));
+    expect(rollupCensus(fromOrder(orderA)).mostCommon).toBe(
+      rollupCensus(fromOrder(orderB)).mostCommon,
+    );
   });
 });

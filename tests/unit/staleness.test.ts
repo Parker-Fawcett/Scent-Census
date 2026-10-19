@@ -27,4 +27,9 @@ describe("isStale", () => {
   it("never trusts an unparseable timestamp as fresh", () => {
     expect(isStale("not-a-date", NOW, 30)).toBe(true);
   });
+
+  it("treats future-dated captures as suspect data, never fresh", () => {
+    const ahead = new Date(NOW.getTime() + 60_000).toISOString();
+    expect(isStale(ahead, NOW, 30)).toBe(true);
+  });
 });
