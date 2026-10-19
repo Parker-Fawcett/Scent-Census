@@ -31,7 +31,8 @@ describe("estimateFragrancePrice", () => {
   it("never invents numbers: stale points are excluded, not blended", () => {
     const fresh = point(5000, 60);
     const ancient = point(990_000, 90 * 24 * 60);
-    const estimate = estimateFragrancePrice([fresh, ancient], { now: NOW, minSample: 1 });
+    // default floor applies: one fresh point is real data, but thin
+    const estimate = estimateFragrancePrice([fresh, ancient], { now: NOW });
     expect(estimate.sampleSize).toBe(1);
     expect(estimate).toMatchObject({ status: "thin", lowCents: 5000, highCents: 5000 });
   });
@@ -56,12 +57,12 @@ describe("estimateFragrancePrice", () => {
   });
 
   it("trims outliers off both tails before summarizing (10 values)", () => {
-    // 8×5000 junked at both tails by 10,200
-    const mine = [10, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 200].map((c, i) =>
+    // 8 honest readings at 5000, one junk low and one junk high
+    const mine = [10, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 5000, 10_000].map((c, i) =>
       point(c, i + 1),
     );
     const estimate = estimateFragrancePrice(mine, { now: NOW, minSample: 12 });
-    // trimmed list is 8 × 5000
+    // sorted: junk 10 first, junk 10000 last; one trim per side leaves 8 × 5000
     expect(estimate).toMatchObject({
       status: "thin",
       lowCents: 5000,

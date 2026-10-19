@@ -17,21 +17,59 @@ export type RankLevel = "none" | "low" | "confident";
 
 export interface CensusRollup {
   sampleSize: number;
-  score: number; // 0..100, variable-weighted mean with trimmed outliers
+  score: number; // 0..100
   rankLevel: RankLevel;
   mostCommon: CensusBucket | null;
 }
 
 /** One vote per user per pair; a later vote replaces the earlier one. */
 export function upsertCloneVote(votes: CloneVotePair[], vote: CloneVotePair): CloneVotePair[] {
-  throw new Error("not implemented: upsertCloneVote");
+  const filtered = votes.filter(
+    (v) =>
+      !(
+        v.userId === vote.userId &&
+        v.cloneId === vote.cloneId &&
+        v.targetId === vote.targetId
+      ),
+  );
+  return [...filtered, vote];
 }
+
+function trimmedMean(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length < 10) {
+    // below 10 points the tails are the most honest information present
+    return sorted.reduce((sum, v) => sum + v, 0) / sorted.length;
+  }
+  const k = Math.max(1, Math.floor(sorted.length * 0.1));
+  const trimmed = sorted.slice(k, sorted.length - k);
+  return trimmed.reduce((sum, v) => sum + v, 0) / trimmed.length;
+}
+
+const byCount = (a: [CensusBucket, number], b: [CensusBucket, number]) => b[1] - a[1];
 
 export function rollupCensus(
   votes: CloneVotePair[],
   opts?: { lowVotes?: number; confidentVotes?: number },
 ): CensusRollup {
-  throw new Error("not implemented: rollupCensus");
+  const lowVotes = opts?.lowVotes ?? floors.census.lowConfidenceVotes;
+  const confidentVotes = opts?.confidentVotes ?? floors.census.confidentVotes;
+
+  if (votes.length === 0) {
+    return { sampleSize: 0, score: 0, rankLevel: "none", mostCommon: null };
+  }
+
+  const counts = new Map<CensusBucket, number>();
+  for (const v of votes) {
+    counts.set(v.bucket, (counts.get(v.bucket) ?? 0) + 1);
+  }
+  const mostCommon = [...counts.entries()].sort(byCount)[0][0];
+
+  const score = Math.round(trimmedMean(votes.map((v) => BUCKET_VALUES[v.bucket])));
+  const rankLevel: RankLevel =
+    votes.length >= confidentVotes ? "confident" : votes.length >= lowVotes ? "low" : "none";
+
+  return { sampleSize: votes.length, score, rankLevel, mostCommon };
 }
 
 /** Order two clone rollups; near-equal scores display as statistically tied. */
@@ -40,8 +78,10 @@ export function compareClones(
   b: CensusRollup,
   opts?: { tieBand?: number },
 ): "a" | "b" | "tied" {
-  throw new Error("not implemented: compareClones");
+  const tieBand = opts?.tieBand ?? floors.census.tieBand;
+  if (a.rankLevel === "none" && b.rankLevel === "none") return "tied";
+  if (a.rankLevel === "none") return "b";
+  if (b.rankLevel === "none") return "a";
+  if (Math.abs(a.score - b.score) <= tieBand) return "tied";
+  return a.score > b.score ? "a" : "b";
 }
-
-// keep floors imported so the defaults stay wired (lint cleanliness pre-impl)
-void floors;

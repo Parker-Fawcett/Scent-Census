@@ -11,10 +11,39 @@ export interface CatalogHit {
   matchKind: MatchKind;
 }
 
+function kindOf(name: string, house: string, q: string): MatchKind | null {
+  if (name === q) return "exact-name";
+  if (name.startsWith(q)) return "name-prefix";
+  if (name.includes(q)) return "name-contains";
+  if (house.includes(q)) return "house";
+  return null;
+}
+
+const KIND_RANK: Record<MatchKind, number> = {
+  "exact-name": 0,
+  "name-prefix": 1,
+  "name-contains": 2,
+  house: 3,
+};
+
 export function searchCatalog(
   items: CatalogFragrance[],
   query: string,
   opts?: { limit?: number },
 ): CatalogHit[] {
-  throw new Error("not implemented: searchCatalog");
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const limit = opts?.limit ?? 20;
+
+  const hits: CatalogHit[] = [];
+  for (const fragrance of items) {
+    const kind = kindOf(
+      fragrance.name.toLowerCase(),
+      fragrance.house.name.toLowerCase(),
+      q,
+    );
+    if (kind) hits.push({ fragrance, matchKind: kind });
+  }
+
+  return hits.sort((x, y) => KIND_RANK[x.matchKind] - KIND_RANK[y.matchKind]).slice(0, limit);
 }
