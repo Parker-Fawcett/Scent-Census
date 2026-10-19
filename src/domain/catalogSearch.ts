@@ -1,6 +1,7 @@
-// Search over the catalogue (PRD section 7.1 acceptance criteria: the famous
-// seed must get found instantly). Pure function over in-memory records;
-// ranking is exact name, then prefix, then substring, then house match.
+/** Search over the catalogue (PRD section 7.1 acceptance criteria: the famous
+ * seed must get found instantly). Pure function over in-memory records;
+ * ranking is exact name, then prefix, then substring, then house match.
+ * Diacritics fold on both sides so "celine" finds "Céline". */
 
 import type { CatalogFragrance } from "./types";
 
@@ -9,6 +10,11 @@ export type MatchKind = "exact-name" | "name-prefix" | "name-contains" | "house"
 export interface CatalogHit {
   fragrance: CatalogFragrance;
   matchKind: MatchKind;
+}
+
+function fold(s: string): string {
+  // strip diacritics (NFD combining marks), then lowercase
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 function kindOf(name: string, house: string, q: string): MatchKind | null {
@@ -31,15 +37,15 @@ export function searchCatalog(
   query: string,
   opts?: { limit?: number },
 ): CatalogHit[] {
-  const q = query.trim().toLowerCase();
+  const q = fold(query);
   if (!q) return [];
   const limit = opts?.limit ?? 20;
 
   const hits: CatalogHit[] = [];
   for (const fragrance of items) {
     const kind = kindOf(
-      fragrance.name.toLowerCase(),
-      fragrance.house.name.toLowerCase(),
+      fold(fragrance.name),
+      fold(fragrance.house.name),
       q,
     );
     if (kind) hits.push({ fragrance, matchKind: kind });

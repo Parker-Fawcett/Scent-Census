@@ -1,7 +1,10 @@
 // Price honesty contract, PRD section 8 rule 2: ONE function computes
-// estimates. Trimmed mean over fresh points, declared minimum sample,
-// range always (never a lone figure), and staleness honored via staleness.ts.
-// Zero invention: stale points are excluded from every output, ever.
+// estimates. Trimmed mean over fresh points, declared minimum sample, range
+// always, staleness honored via staleness.ts, and contamination refused:
+// callers must hand this function ONE source and ONE bottle size, because a
+// blended mean of MSRP and asking prices (or of 30ml and 100ml asks) is a
+// confidently wrong number, which is the one thing this contract exists to
+// prevent.
 
 import type { PriceCapture } from "./types";
 import { isStale } from "./staleness";
@@ -14,7 +17,7 @@ export interface PriceEstimate {
   lowCents: number | null;
   midCents: number | null;
   highCents: number | null;
-  /** count of fresh points actually used */
+  /** count of fresh points sampled (before trimming) */
   sampleSize: number;
 }
 
@@ -24,6 +27,17 @@ export function estimateFragrancePrice(
 ): PriceEstimate {
   const staleDays = opts.staleDays ?? floors.price.staleDays;
   const minSample = opts.minSample ?? floors.price.minSample;
+
+  if (new Set(points.map((p) => p.source)).size > 1) {
+    throw new Error(
+      "price honesty: mixing sources contaminates the trimmed mean (PRD 8); group by source before estimating",
+    );
+  }
+  if (new Set(points.map((p) => p.sizeMl)).size > 1) {
+    throw new Error(
+      "price honesty: mixing bottle sizes contaminates the range (PRD 8); group by size before estimating",
+    );
+  }
 
   const fresh = points.filter(
     (p) => p.priceCents > 0 && !isStale(p.capturedAt, opts.now, staleDays),

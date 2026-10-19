@@ -160,6 +160,19 @@ model FragranceNote {
   @@id([fragranceId, noteId, position])
 }
 
+model CatalogueRequest {
+  id            String   @id @default(cuid())
+  // nullable so non-users can request too; users get status visibility
+  requestedById String?
+  requestedBy   User?    @relation(fields: [requestedById], references: [id])
+  name          String
+  houseGuess    String?
+  // if the request matched a known FragDB pid, it ingests directly
+  sourcePid     String?
+  status        String   @default("open") // open | added | rejected
+  createdAt     DateTime @default(now())
+}
+
 model CollectionItem {
   id             String    @id @default(cuid())
   userId         String
@@ -173,6 +186,8 @@ model CollectionItem {
   sealed         Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 model Vote {
@@ -199,6 +214,8 @@ model PricePoint {
   priceCents      Int
   capturedAt      DateTime
   sourceListingId String?
+
+  @@index([fragranceId, capturedAt])
 }
 
 model FragranceEstimate {
@@ -210,6 +227,11 @@ model FragranceEstimate {
   sampleSize  Int
   computedAt  DateTime
   isStale     Boolean   @default(false)
+  // previous band is retained on recompute so worth-move events diff against
+  // something real instead of remembering it elsewhere (PRD 7.7 signal 4)
+  previousLowCents  Int?
+  previousHighCents Int?
+  previousComputedAt DateTime?
 }
 
 model CloneVote {
@@ -223,6 +245,7 @@ model CloneVote {
   votedAt  DateTime @default(now())
 
   @@unique([userId, cloneId, targetId])
+  @@index([cloneId, targetId])
 }
 
 model CloneRollup {
@@ -265,6 +288,7 @@ model Follow {
   createdAt       DateTime    @default(now())
 
   @@unique([userId, subjectType, subjectId])
+  @@index([subjectType, subjectId])
 }
 
 model UpdateEvent {
@@ -278,4 +302,7 @@ model UpdateEvent {
   occurredAt  DateTime
   emittedAt   DateTime        @default(now())
   sourceLabel String
+
+  // feed fetch is "latest for this user"; index serves it, sort at query time
+  @@index([userId])
 }

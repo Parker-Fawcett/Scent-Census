@@ -42,8 +42,9 @@ export function clearCloneVote(
   cloneId: string,
   targetId: string,
 ): CloneVotePair[] {
-  void votes; void userId; void cloneId; void targetId;
-  throw new Error("not implemented: clearCloneVote");
+  return votes.filter(
+    (v) => !(v.userId === userId && v.cloneId === cloneId && v.targetId === targetId),
+  );
 }
 
 function trimmedMean(values: number[]): number {
@@ -56,8 +57,6 @@ function trimmedMean(values: number[]): number {
   const trimmed = sorted.slice(k, sorted.length - k);
   return trimmed.reduce((sum, v) => sum + v, 0) / trimmed.length;
 }
-
-const byCount = (a: [CensusBucket, number], b: [CensusBucket, number]) => b[1] - a[1];
 
 export function rollupCensus(
   votes: CloneVotePair[],
@@ -74,7 +73,12 @@ export function rollupCensus(
   for (const v of votes) {
     counts.set(v.bucket, (counts.get(v.bucket) ?? 0) + 1);
   }
-  const mostCommon = [...counts.entries()].sort(byCount)[0][0];
+  // count wins; a count tie must not follow vote arrival order, so bucket
+  // name (alphabetical, stable) decides. The same tie rule lets a caller
+  // alphabetize "tied" clones deterministically (PRD 7.6 stable-order rule).
+  const mostCommon = [...counts.entries()].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+  )[0][0];
 
   const score = Math.round(trimmedMean(votes.map((v) => BUCKET_VALUES[v.bucket])));
   const rankLevel: RankLevel =
@@ -83,7 +87,9 @@ export function rollupCensus(
   return { sampleSize: votes.length, score, rankLevel, mostCommon };
 }
 
-/** Order two clone rollups; near-equal scores display as statistically tied. */
+/** Order two clone rollups; near-equal scores display as statistically tied.
+ * "tied" (including two unranked clones) means the caller must produce a
+ * stable order, which per PRD 7.6 is alphabetical by name. */
 export function compareClones(
   a: CensusRollup,
   b: CensusRollup,

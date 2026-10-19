@@ -3,7 +3,8 @@
 // definition of "old data".
 export function isStale(capturedAt: string, now: Date, windowDays = 30): boolean {
   const captured = new Date(capturedAt).getTime();
-  if (Number.isNaN(captured)) return true; // unparseable timestamps never read fresh
+  // unparseable and future-dated captures are suspect data, never fresh
+  if (Number.isNaN(captured) || captured > now.getTime()) return true;
   const windowMs = windowDays * 24 * 60 * 60 * 1000;
   return now.getTime() - captured > windowMs;
 }
