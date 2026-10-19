@@ -31,7 +31,7 @@ async function seed(): Promise<{ userId: string; fragranceId: string }> {
   const fragrance = await prisma.fragrance.create({
     data: { name: `Frag ${crypto.randomUUID()}`, slug: `frag-${crypto.randomUUID()}`, houseId: house.id },
   });
-  const user = await prisma.user.create({ data: {} });
+  const user = await prisma.user.create({ data: { email: `${crypto.randomUUID()}@test.local` } });
   return { userId: user.id, fragranceId: fragrance.id };
 }
 
