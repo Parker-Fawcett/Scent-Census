@@ -279,8 +279,8 @@ Note the mix: three long-form authority channels (Cal, Gents Scents, Cuba Know) 
 
 ## 12. Milestones
 
-- **M0** Decisions: this doc approved, stack memo (next), repo named.
-- **M1** Domain core red-first: Note/Fragrance/House types, search, clone-of graph; FakeMarketDataSource contract tests.
+- **M0** DONE. Decisions: this doc approved, stack memo approved, repo named.
+- **M1** DONE. Domain core red-first (staleness, price honesty, census math, search with accent folding + whitespace discipline, release diffing with duplicate-pid guard), market-source seam with deterministic fake + per-group grouping, FragDB ingest mapper proven against the real 10-row sample fixtures, Prisma schema migrated against local Postgres (dev + test via docker-compose). 64 unit tests, all gates green.
 - **M2** Collection + worth pipeline live against real PricePoint ingestion; staleness rules tested.
 - **M3** Onboarding + shelf UI; empty states; worth summary.
 - **M4** Votes + feed algorithm + golden fixtures + reason lines.
