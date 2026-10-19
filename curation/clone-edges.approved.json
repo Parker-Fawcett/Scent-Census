@@ -1,0 +1,17 @@
+{
+  "_comment": "Approved clone-census edges. Format mirrors src/server/curation.ts PendingEdge: corpus fid pair + curator note. Seeded from the ranked community signal (censusCandidates.generated.ts, top net>=1400 only); each pair is also famous in the clone scene. Review wanted: Parker's taste pass can rename, retarget, or delete entries; the loader refuses overwrite and reruns are no-ops.",
+  "edges": [
+    { "cloneFid": "34696", "targetFid": "9828",  "note": "Armaf Club de Nuit Intense Man -> Creed Aventus (community 6141/938)" },
+    { "cloneFid": "65414", "targetFid": "30947", "note": "Afnan 9pm -> JPG Ultra Male (2851/175)" },
+    { "cloneFid": "72821", "targetFid": "68415", "note": "Lattafa Asad -> Dior Sauvage Elixir (2951/551)" },
+    { "cloneFid": "34696", "targetFid": "52002", "note": "CDN Intense Man's second famous comparison; the census column holds one canon edge (Aventus), so this rides as an alternate for the vote surfaces", "alternate": true },
+    { "cloneFid": "70465", "targetFid": "50757", "note": "Lattafa Fakhar Black -> YSL Y EDP (1905/316)" },
+    { "cloneFid": "64948", "targetFid": "53641", "note": "Lattafa Bade'e Al Oud Oud for Glory -> Initio Oud for Greatness (1725/177)" },
+    { "cloneFid": "93628", "targetFid": "64757", "note": "Lattafa Eclaire -> Bianco Latte (1709/183)" },
+    { "cloneFid": "78560", "targetFid": "70052", "note": "Lattafa Nebras -> Billie Eilish Eilish (1439/89)" },
+    { "cloneFid": "64105", "targetFid": "472",   "note": "Armaf CDN Sillage -> Creed Silver Mountain Water (1485/154)" },
+    { "cloneFid": "70839", "targetFid": "41222", "note": "Afnan Turathi Blue -> Bvlgari Tygar (1591/304)" },
+    { "cloneFid": "96768", "targetFid": "83483", "note": "Lattafa Angham -> Burberry Goddess (1430/146)" },
+    { "cloneFid": "27656", "targetFid": "1822",  "note": "Armaf CDN Intense -> Tom Ford Noir de Noir (1407/245)" }
+  ]
+}
