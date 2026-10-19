@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { listCreatorPickupsForFragrance } from "@/server/creators";
-
+import { toggleFollow } from "@/server/follows";
+import { toggleFollowAction } from "@/app/fragrance/[slug]/censusActions";
 async function CreatorData({ slug }: { slug: string }) {
   await connection();
   const creator = await prisma.creator.findUnique({
@@ -35,14 +35,10 @@ async function CreatorData({ slug }: { slug: string }) {
         {creator.claimedBy?.name ? ` · claimed by ${creator.claimedBy.name}` : " · unclaimed"}
       </p>
       {creator.bio ? <p>{creator.bio}</p> : null}
-      <form action={async (fd: FormData) => {
-        "use server";
-        const { toggleFollow } = await import("@/server/follows");
-        const s = await (await import("@/lib/auth")).auth();
-        if (!s?.user?.id) (await import("next/navigation")).redirect("/signin");
-        await toggleFollow(prisma, s!.user!.id, { subjectType: "CREATOR", subjectId: creator.id });
-        (await import("next/navigation")).redirect(`/creator/${creator.slug}`);
-      }} style={{ margin: "0.5rem 0" }}>
+      <form action={toggleFollowAction} style={{ margin: "0.5rem 0" }}>
+        <input type="hidden" name="slug" value={creator.slug} />
+        <input type="hidden" name="subjectType" value="CREATOR" />
+        <input type="hidden" name="subjectId" value={creator.id} />
         <button type="submit" style={{ padding: "0.25rem 0.5rem", fontSize: "0.85rem" }}>
           {isFollowing ? "Following" : "Follow"}
         </button>

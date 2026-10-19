@@ -81,6 +81,11 @@ export async function verifyCreator(
   prisma: PrismaInstance,
   creatorId: string,
 ): Promise<void> {
+  const creator = await prisma.creator.findUnique({ where: { id: creatorId } });
+  if (creator === null) throw new Error("creator: unknown creator");
+  if (creator.status !== "CLAIMED") {
+    throw new Error("creator: only a claimed account can be verified");
+  }
   await prisma.creator.update({ where: { id: creatorId }, data: { status: "VERIFIED" } });
 }
 

@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { clearCloneVoteForUser, saveCloneVote } from "@/server/census";
-import { emitUpdateEvent, toggleFollow } from "@/server/follows";
+import { toggleFollow } from "@/server/follows";
 
 export async function cloneCensusVoteAction(formData: FormData): Promise<void> {
   const session = await auth();
@@ -41,11 +41,11 @@ export async function toggleFollowAction(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const slug = String(formData.get("slug") ?? "");
-  const subjectType = String(formData.get("subjectType") ?? "FRAGRANCE") as
-    | "FRAGRANCE"
-    | "HOUSE"
-    | "CREATOR";
+  const subjectTypeRaw = String(formData.get("subjectType") ?? "FRAGRANCE");
+  const subjectType =
+    subjectTypeRaw === "HOUSE" || subjectTypeRaw === "CREATOR" ? subjectTypeRaw : "FRAGRANCE";
   const subjectId = String(formData.get("subjectId") ?? "");
+  if (subjectId === "") redirect(`/fragrance/${slug}`);
   await toggleFollow(prisma, session.user.id, { subjectType, subjectId });
   redirect(`/fragrance/${slug}`);
 }

@@ -134,7 +134,6 @@ export async function saveCloneVote(
   // would otherwise spam the update strip every vote
   if (previous === null || previous.rankLevel !== next.rankLevel) {
     if (next.rankLevel === "low" || next.rankLevel === "confident") {
-      const milestoneLabel = next.rankLevel === "confident" ? "confident" : "low";
       try {
         // emission runs after the transaction commits so a follower-side
         // failure cannot roll back the vote itself

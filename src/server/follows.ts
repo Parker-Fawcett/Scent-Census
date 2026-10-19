@@ -4,6 +4,7 @@
 // (the event's natural identity, e.g. "pair:milestone:25") rather than a
 // timestamp, so a re-fired rollup cannot spam a feed that has already seen it.
 
+import { Prisma } from "@prisma/client";
 import type { PrismaInstance } from "@/lib/prisma";
 import type { UpdateEventType, SubjectType } from "@prisma/client";
 
@@ -32,16 +33,26 @@ export async function toggleFollow(
   userId: string,
   input: FollowInput,
 ): Promise<ToggleFollowResult> {
-  const existing = await prisma.follow.findUnique({
-    where: { userId_subjectType_subjectId: { userId, subjectType: input.subjectType, subjectId: input.subjectId } },
-  });
+  const key = { userId, subjectType: input.subjectType, subjectId: input.subjectId };
+  const existing = await prisma.follow.findUnique({ where: { userId_subjectType_subjectId: key } });
   if (existing !== null) {
     await prisma.follow.delete({ where: { id: existing.id } });
     return { following: false };
   }
-  await prisma.follow.create({
-    data: { userId, subjectType: input.subjectType, subjectId: input.subjectId },
-  });
+  try {
+    await prisma.follow.create({ data: key });
+  } catch (error) {
+    // two concurrent toggles can both pass the findUnique; the unique
+    // constraint is the real arbiter, so a collision means "already there"
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const now = await prisma.follow.findUnique({ where: { userId_subjectType_subjectId: key } });
+      if (now !== null) {
+        await prisma.follow.delete({ where: { id: now.id } });
+        return { following: false };
+      }
+    }
+    throw error;
+  }
   return { following: true };
 }
 
