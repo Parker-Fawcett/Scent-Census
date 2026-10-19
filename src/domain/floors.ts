@@ -20,4 +20,8 @@ export const floors = {
     /** Share of feed cards matched to taste; the rest is deliberate contrast. */
     tasteShare: 0.7,
   },
+  worth: {
+    /** Shelf worth is a resale proxy: asking prices, never retail tags. */
+    source: "EBAY_ASKING",
+  },
 } as const;

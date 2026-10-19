@@ -145,7 +145,7 @@ describe("shelfWorth", () => {
     const summary = shelfWorth([
       shelf({
         items: [{ itemId: "a", sizeMl: 100, pricePaidCents: 5000 }],
-        groups: [group()],
+        groups: [group({ sizeMl: 28 })],
       }),
       shelf({
         items: [{ itemId: "b", sizeMl: 999, pricePaidCents: 6000 }],
