@@ -69,8 +69,7 @@ async function ShelfData() {
   const worth = summary.totalWorthCents;
   return (
     <section>
-      <h2>Worth summary</h2>
-      <p>
+      <h2>Worth summary</h2>      <p>
         {worth !== null ? (
           <>
             Estimated worth {summary.bottlesWithMarket} of {summary.bottlesTotal} bottles
@@ -106,6 +105,9 @@ export default function ShelfPage() {
   return (
     <main style={{ maxWidth: 640, margin: "3rem auto", padding: "0 1rem" }}>
       <h1>Your shelf</h1>
+      <p>
+        <a href="/shelf/add">Add a bottle</a>
+      </p>
       <Suspense fallback={<p>Loading your shelf...</p>}>
         <ShelfData />
       </Suspense>
