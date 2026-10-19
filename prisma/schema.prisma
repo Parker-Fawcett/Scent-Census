@@ -1,0 +1,281 @@
+// Scent Census data model. Contract source: docs/PRD-v1.md section 9.
+// Every relation mirrors the PRD; the catalogueSourcePid columns keep the
+// FragDB stable IDs for refresh joins without letting source keys become ours.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HouseTier {
+  DESIGNER
+  NICHE
+  CLONE
+  MASS_MARKET
+}
+
+enum NotePosition {
+  TOP
+  HEART
+  BASE
+}
+
+enum Concentration {
+  OIL
+  EDC
+  EDT
+  EDP
+  EXTRAIT
+  OTHER
+}
+
+enum VoteDirection {
+  LIKE
+  DISLIKE
+  DECLINE
+  OWN
+}
+
+enum CensusBucket {
+  SPOT_ON
+  CLOSE
+  SIMILAR
+  SAME_FAMILY
+  NOT_CLOSE
+}
+
+enum CreatorStatus {
+  UNCLAIMED
+  INVITED
+  CLAIMED
+  VERIFIED
+}
+
+enum SubjectType {
+  FRAGRANCE
+  HOUSE
+  CREATOR
+}
+
+enum UpdateEventType {
+  DROP
+  NEW_REVIEW
+  PICKUP
+  CENSUS_MILESTONE
+  WORTH_MOVE
+  STATUS_CHANGE
+}
+
+enum PriceSource {
+  EBAY_ASKING
+  RETAIL_FEED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  passwordHash  String?
+  // onboarding taste answers (PRD section 7.1); nullable so skipping is legal
+  budgetBand    String?
+  buysClones    Boolean?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  collectionItems CollectionItem[]
+  votes           Vote[]
+  cloneVotes      CloneVote[]
+  follows         Follow[]
+  updateEvents    UpdateEvent[]
+  claimedCreator  Creator?
+}
+
+model House {
+  id                 String     @id @default(cuid())
+  name               String     @unique
+  slug               String     @unique
+  tier               HouseTier
+  // Stable id from the catalogue source (FragDB brand id) for refresh joins.
+  catalogueSourcePid String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  fragrances Fragrance[]
+}
+
+model Note {
+  id     String @id @default(cuid())
+  name   String @unique
+  family String
+
+  fragranceNotes FragranceNote[]
+}
+
+model Fragrance {
+  id             String         @id @default(cuid())
+  name           String
+  slug           String         @unique
+  houseId        String
+  house          House          @relation(fields: [houseId], references: [id])
+  concentration  Concentration?
+  year           Int?
+  discontinued   Boolean        @default(false)
+  perfumer       String?
+  blindBuyRisk   Float?
+  // clone-of edge (PRD section 9): null for originals
+  inspiredById   String?
+  inspiredBy     Fragrance?     @relation("CloneOf", fields: [inspiredById], references: [id])
+  inspiredClones Fragrance[]    @relation("CloneOf")
+  // stable FragDB pid for release diffs and refresh joins
+  catalogueSourcePid String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  notes             FragranceNote[]
+  collectionItems   CollectionItem[]
+  votes             Vote[]
+  pricePoints       PricePoint[]
+  estimate          FragranceEstimate?
+  cloneVotesAsClone CloneVote[]        @relation("CloneVoteClone")
+  cloneVotesAsTarget CloneVote[]       @relation("CloneVoteTarget")
+  rollupsAsClone    CloneRollup[]      @relation("RollupClone")
+  rollupsAsTarget   CloneRollup[]      @relation("RollupTarget")
+}
+
+model FragranceNote {
+  fragranceId String
+  fragrance   Fragrance @relation(fields: [fragranceId], references: [id], onDelete: Cascade)
+  noteId      String
+  note        Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  position    NotePosition
+  // FragDB pyramid weight/opacity, 0..1
+  weight      Float     @default(0.5)
+
+  @@id([fragranceId, noteId, position])
+}
+
+model CollectionItem {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  fragranceId    String
+  fragrance      Fragrance @relation(fields: [fragranceId], references: [id])
+  sizeMl         Int?
+  batchCode      String?
+  pricePaidCents Int?
+  purchasedOn    DateTime?
+  sealed         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Vote {
+  userId      String
+  user        User @relation(fields: [userId], references: [id])
+  fragranceId String
+  fragrance   Fragrance @relation(fields: [fragranceId], references: [id])
+  direction   VoteDirection
+  // which reason line was visible when the vote happened (PRD section 7.3)
+  reasonSlug  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@id([userId, fragranceId])
+}
+
+model PricePoint {
+  id              String      @id @default(cuid())
+  fragranceId     String
+  fragrance       Fragrance   @relation(fields: [fragranceId], references: [id])
+  source          PriceSource
+  sizeMl          Int?
+  condition       String?
+  priceCents      Int
+  capturedAt      DateTime
+  sourceListingId String?
+}
+
+model FragranceEstimate {
+  fragranceId String    @id
+  fragrance   Fragrance @relation(fields: [fragranceId], references: [id])
+  lowCents    Int
+  midCents    Int
+  highCents   Int
+  sampleSize  Int
+  computedAt  DateTime
+  isStale     Boolean   @default(false)
+}
+
+model CloneVote {
+  userId   String
+  user     User @relation(fields: [userId], references: [id])
+  cloneId  String
+  clone    Fragrance @relation("CloneVoteClone", fields: [cloneId], references: [id])
+  targetId String
+  target   Fragrance @relation("CloneVoteTarget", fields: [targetId], references: [id])
+  bucket   CensusBucket
+  votedAt  DateTime @default(now())
+
+  @@unique([userId, cloneId, targetId])
+}
+
+model CloneRollup {
+  id         String    @id @default(cuid())
+  cloneId    String
+  clone      Fragrance @relation("RollupClone", fields: [cloneId], references: [id])
+  targetId   String
+  target     Fragrance @relation("RollupTarget", fields: [targetId], references: [id])
+  score      Int
+  sampleSize Int
+  computedAt DateTime
+  isStale    Boolean   @default(false)
+
+  @@unique([cloneId, targetId])
+}
+
+// Creator accounts are claim-based (PRD section 7.7): we invite, they claim.
+// Fragrence never runs fan pages.
+model Creator {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  name        String
+  platforms   Json
+  status      CreatorStatus @default(UNCLAIMED)
+  claimedById String?       @unique
+  claimedBy   User?         @relation(fields: [claimedById], references: [id])
+  bio         String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Follow {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  subjectType     SubjectType
+  subjectId       String
+  // guards double-emitting drop and review events
+  lastSeenRelease String?
+  createdAt       DateTime    @default(now())
+
+  @@unique([userId, subjectType, subjectId])
+}
+
+model UpdateEvent {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  type        UpdateEventType
+  subjectType SubjectType
+  subjectId   String
+  payload     Json
+  occurredAt  DateTime
+  emittedAt   DateTime        @default(now())
+  sourceLabel String
+}
