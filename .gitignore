@@ -45,3 +45,4 @@ data/
 # local tooling artifacts
 .playwright-cli/
 test-results/
+.neon
