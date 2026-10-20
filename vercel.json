@@ -1,5 +1,5 @@
 {
-  "buildCommand": "prisma migrate deploy && next build",
+  "buildCommand": "next build",
   "crons": [
     { "path": "/api/cron/rollup-backstop", "schedule": "0 3 * * *" },
     { "path": "/api/cron/staleness", "schedule": "0 4 * * *" }
