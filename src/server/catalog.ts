@@ -208,6 +208,11 @@ export async function importDumpRecords(
       accords: [...r.accords]
         .sort((a, b) => b.strength - a.strength)
         .map((a) => a.name),
+      // note names sorted by pyramid weight, strongest first; corpus notes
+      // are untiered mostly, so weight is the only honest ordering signal
+      noteNames: r.pyramid
+        .map((n) => n.name)
+        .filter((name, i, arr) => arr.indexOf(name) === i),
       catalogueSourcePid: pid,
     };
   };
@@ -364,7 +369,7 @@ export async function searchCatalogInDb(
               ],
             })),
           },
-    include: { house: true, notes: { include: { note: true } } },
+    include: { house: true },
     take: 500,
   });
   const catalogRecords = rows.map((row) => ({
@@ -374,7 +379,7 @@ export async function searchCatalogInDb(
     house: { id: row.house.id, name: row.house.name, slug: row.house.slug, tier: row.house.tier },
     year: row.year,
     inspiredById: row.inspiredById,
-    noteNames: row.notes.map((n) => n.note.name),
+    noteNames: row.noteNames,
     accordNames: row.accords,
   }));
   return searchCatalog(catalogRecords, query);

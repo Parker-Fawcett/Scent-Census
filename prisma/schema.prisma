@@ -175,6 +175,9 @@ model Fragrance {
   // community accord names ordered by vote strength (strongest first);
   // provenance is the corpus snapshot, so nothing is curated here
   accords        String[]   @default([])
+  // denormalized note names (sorted by pyramid weight) so catalogue search
+  // never joins FragranceNote at query time (PRD 7.1 perf)
+  noteNames      String[]   @default([])
   discontinued   Boolean        @default(false)
   perfumer       String?
   blindBuyRisk   Float?

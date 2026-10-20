@@ -186,6 +186,9 @@ export async function clearCloneVoteForUser(
   cloneId: string,
   targetId: string,
 ): Promise<PairRollup | null> {
+  // milestones fire on PROMOTION only (saveCloneVote); a clear that demotes a
+  // pair is deliberately silent so the update strip never announces "lost
+  // confidence" noise. Revisit if the product wants demotion notices.
   return prisma.$transaction(async (tx) => {
     await tx.cloneVote.deleteMany({ where: { userId, cloneId, targetId } });
     return recomputePairRollup(tx, cloneId, targetId);

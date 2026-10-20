@@ -1,0 +1,1 @@
+ALTER TABLE "Fragrance" ADD COLUMN "noteNames" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
