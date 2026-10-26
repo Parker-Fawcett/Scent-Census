@@ -8,7 +8,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:integration": "prisma migrate deploy && vitest run --config vitest.integration.config.ts",
     "seed:catalog": "tsx scripts/seed-catalog.ts --env-file=.env",
