@@ -74,9 +74,9 @@ export default async function SearchPage({ searchParams }: Params) {
         <div className="empty" style={{ marginTop: "2.5rem" }}>
           <p className="title">Type a fragrance or a house</p>
           <p className="sub">
-            You do not have to get it exact. "lattfa" still finds Lattafa, and
-            "turathi blue" still finds Turathi Blue. A search for a house name
-            brings up that house's catalogue.
+            You do not have to get it exact. “lattfa” still finds Lattafa, and
+            “turathi blue” still finds Turathi Blue. A search for a house name
+            brings up that house’s catalogue.
           </p>
         </div>
       ) : hits.length === 0 ? (
@@ -84,7 +84,7 @@ export default async function SearchPage({ searchParams }: Params) {
           <p className="title">Nothing in the catalogue matches {query}</p>
           <p className="sub">
             The catalogue holds 140,228 fragrances, so a misspelling is the
-            likely cause. Try the house name instead, like "Creed" or "Aventus".
+            likely cause. Try the house name instead, like “Creed” or “Aventus”.
           </p>
         </div>
       ) : (

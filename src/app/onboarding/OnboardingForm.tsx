@@ -41,16 +41,14 @@ function BottlePicker({ initial }: { initial: Hit | null }) {
   const [chosen, setChosen] = useState<Hit | null>(initial);
   const seq = useRef(0);
 
+  // the effect only schedules the fetch; resetting hits and flagging a
+  // search in progress happen in the change handler, so typing never
+  // triggers a cascading render from inside the effect
   useEffect(() => {
     if (chosen !== null) return;
     const q = query.trim();
-    if (q.length < 2) {
-      setHits([]);
-      setSearching(false);
-      return;
-    }
+    if (q.length < 2) return;
     const my = ++seq.current;
-    setSearching(true);
     const handle = setTimeout(async () => {
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=6`);
@@ -99,7 +97,15 @@ function BottlePicker({ initial }: { initial: Hit | null }) {
       <input
         type="search"
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={(event) => {
+          const next = event.target.value;
+          const active = next.trim().length >= 2;
+          // drop any in-flight answer for the previous query
+          seq.current += 1;
+          setQuery(next);
+          setSearching(active);
+          if (!active) setHits([]);
+        }}
         placeholder="e.g. sauvage, aventus, lattafa"
         aria-label="Search a bottle you own"
         autoComplete="off"

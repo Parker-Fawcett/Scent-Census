@@ -348,7 +348,7 @@ async function SignedOut() {
         <section className="rule-heavy" style={{ marginTop: "4.5rem" }}>
           <p className="label">The houses that make the most clones</p>
           <p className="fine" style={{ maxWidth: "38rem", marginBottom: "0.75rem" }}>
-            Counted by how many different originals each house's bottles have
+            Counted by how many different originals each house’s bottles have
             been measured as smell-alikes for. The big clone houses show up
             here, not the original brands being copied.
           </p>

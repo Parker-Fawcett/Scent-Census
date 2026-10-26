@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import fs from "node:fs";
 import path from "node:path";
+import type { CensusBucket } from "@prisma/client";
 
 async function main() {
   const file = path.join(process.cwd(), "data", "community-seeds.json");
@@ -29,7 +30,7 @@ async function main() {
       create: {
         cloneId: clone.id,
         targetId: target.id,
-        bucket: s.bucket as any,
+        bucket: s.bucket as CensusBucket,
         score: s.score,
         confidence: s.confidence,
         sampleSize: s.sampleSize,
@@ -38,7 +39,7 @@ async function main() {
         methodology: s.methodology,
       },
       update: {
-        bucket: s.bucket as any,
+        bucket: s.bucket as CensusBucket,
         score: s.score,
         confidence: s.confidence,
         sampleSize: s.sampleSize,

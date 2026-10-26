@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type CensusBucket } from "@prisma/client";
 import { scentFamilyMatch } from "../src/domain/cloneClaims";
 
 const prisma = new PrismaClient();
@@ -95,7 +95,7 @@ async function main() {
             create: {
               cloneId: edge.cloneId,
               targetId: edge.targetId,
-              bucket: bucket as any,
+              bucket: bucket as CensusBucket,
               score,
               confidence: conf,
               sampleSize: edge.upVotes + edge.downVotes,
@@ -104,7 +104,7 @@ async function main() {
               methodology: "scent family match: 50% accord cosine + 50% note Jaccard, computed from Fragrantica corpus note and accord data",
             },
             update: {
-              bucket: bucket as any,
+              bucket: bucket as CensusBucket,
               score,
               confidence: conf,
               sampleSize: edge.upVotes + edge.downVotes,

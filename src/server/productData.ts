@@ -74,7 +74,7 @@ export async function loadProduct(slug: string) {
         })
       : null;
   const targetSeeds = await prisma.communitySeed.findMany({ where: { targetId: f.id } });
-  const seedByClone = new Map(targetSeeds.map((s: any) => [s.cloneId, s]));
+  const seedByClone = new Map(targetSeeds.map((s) => [s.cloneId, s]));
 
   const source = await loadMarketSource(prisma, [f.id]);
   const groups = estimateFromSource(source, f.id, { now: new Date() }).filter(

@@ -38,8 +38,8 @@ function vercelToken(): string {
 }
 
 function projectCoords(): { teamId: string; projectId: string } {
-  const cfg = JSON.parse(readFileSync(".vercel/project.json", "utf8"));
-  return { teamId: (cfg as any).orgId ?? "", projectId: (cfg as any).projectId ?? "" };
+  const cfg = JSON.parse(readFileSync(".vercel/project.json", "utf8")) as { orgId?: string; projectId?: string };
+  return { teamId: cfg.orgId ?? "", projectId: cfg.projectId ?? "" };
 }
 
 async function api<T>(path: string, httpMethod: "GET" | "DELETE" = "GET"): Promise<T> {
