@@ -13,7 +13,7 @@ import type { PrismaInstance } from "@/lib/prisma";
 // lazy import to avoid circular coupling in test bundles
 import { emitUpdateEvent } from "@/server/follows";
 
-const CLONE_BUCKETS: CensusBucket[] = ["SPOT_ON", "CLOSE", "SIMILAR", "SAME_FAMILY", "NOT_CLOSE"];
+const CLONE_BUCKETS: CensusBucket[] = ["SPOT_ON", "CLOSE", "SIMILAR", "NOT_CLOSE"];
 
 export interface PairRollup {
   cloneId: string;
@@ -35,6 +35,30 @@ export interface RankedClone {
   sampleSize: number;
   rankLevel: RankLevel;
   mostCommon: CensusBucket | null;
+  // the catalogue's photo pointer so lists render bottles, not blanks
+  pid: string | null;
+  // where the numbers come from: our own live votes, or the corpus
+  // smell-alike vote counts. The UI labels them differently.
+  source: "live-census" | "smell-alike-votes";
+  upVotes: number | null;
+  downVotes: number | null;
+  // "clone" = a copy of this fragrance; "sibling" = the same house (a
+  // flanker or concentration variant like Lattafa Khamrah Qahwa); "peer" =
+  // another ORIGINAL that people say smells alike (Bvlgari Tygar and
+  // Sospiro Vibrato are both originals, neither is a copy of the other)
+  kind: "clone" | "sibling" | "peer";
+  // community price-perception vote (1 = way overpriced, 5 = great value).
+  // The gap between the copy and the original is the buying signal.
+  valueScore: number | null;
+  // the original's own value vote, so a row can show the gap
+  originalValueScore: number | null;
+  // retail price captures, sized. The copy's price against the original's
+  // price is the number a buyer actually acts on.
+  priceCaptures: Array<{ priceCents: number; sizeMl: number | null; capturedAt: Date }>;
+  originalPriceCaptures: Array<{ priceCents: number; sizeMl: number | null; capturedAt: Date }>;
+  // the house behind this clone, so an ad slot sponsored by a house in this
+  // family can be suppressed on this page
+  houseId: string | null;
 }
 
 function rankLevelFor(sampleSize: number): RankLevel {
@@ -245,9 +269,16 @@ export async function loadRankedClones(
   prisma: PrismaInstance,
   targetId: string,
 ): Promise<RankedClone[]> {
+  // Two sources of truth, in priority order:
+  //  1. CloneRollup: our own measured census (live user votes). Authoritative
+  //     when it has rows, because those are votes cast on this site.
+  //  2. InspiredByEdge: the corpus smell-alike graph, which carries REAL
+  //     community vote counts ("this clone reminds me of the original" /
+  //     "it does not") from the source snapshot. These are measured too, just
+  //     measured elsewhere, so they are labeled as such in the UI.
   const rows = await prisma.cloneRollup.findMany({
     where: { targetId },
-    include: { clone: { select: { id: true, name: true, slug: true, house: { select: { name: true } } } } },
+    include: { clone: { select: { id: true, name: true, slug: true, house: { select: { name: true, id: true } }, catalogueSourcePid: true } } },
   });
 
   // votes across the whole target arrive in one query; bucket mode per clone
@@ -261,15 +292,48 @@ export async function loadRankedClones(
     const counts = votesByClone.get(v.cloneId) ?? new Map<string, number>();
     counts.set(v.bucket, (counts.get(v.bucket) ?? 0) + 1);
     votesByClone.set(v.cloneId, counts);
-  }
+  };
   const mostCommonOf = (cloneId: string, sampleSize: number): CensusBucket | null => {
     if (sampleSize === 0) return null;
     const counts = votesByClone.get(cloneId);
     if (!counts) return null;
-    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0] as CensusBucket;
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0] as CensusBucket | null;
   };
 
-  const entries = rows.map((row) => ({
+  // the smell-alike graph: every curated pair, with its measured vote counts
+  const edges = await prisma.inspiredByEdge.findMany({
+    where: { targetId },
+    include: { clone: { select: { id: true, name: true, slug: true, house: { select: { name: true, id: true } }, catalogueSourcePid: true } } },
+  });
+  const edges0 = edges;
+
+  // the retail prices for every clone and original in play. Only captures
+  // near 100ml count, because that is the size clone houses standardize on
+  // and the size a buyer compares.
+  const priceRows = await prisma.pricePoint.findMany({
+    where: {
+      fragranceId: { in: [targetId, ...rows.map((r) => r.cloneId), ...edges0.map((e) => e.cloneId)] },
+      capturedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+    },
+    select: { fragranceId: true, priceCents: true, sizeMl: true, capturedAt: true },
+  });
+  const pricesById = new Map<string, Array<{ priceCents: number; sizeMl: number | null; capturedAt: Date }>>();
+  for (const p of priceRows) {
+    const list = pricesById.get(p.fragranceId) ?? [];
+    list.push({ priceCents: p.priceCents, sizeMl: p.sizeMl, capturedAt: p.capturedAt });
+    pricesById.set(p.fragranceId, list);
+  }
+  const targetPrice = pricesById.get(targetId) ?? [];
+
+  // the price-perception votes for every clone and original in play
+  const valueRows = await prisma.fragrance.findMany({
+    where: { id: { in: [targetId, ...rows.map((r) => r.cloneId), ...edges0.map((e) => e.cloneId)] } },
+    select: { id: true, priceValue: true },
+  });
+  const valueById = new Map(valueRows.map((v) => [v.id, v.priceValue]));
+  const targetValue = valueById.get(targetId) ?? null;
+
+  const entries: RankedClone[] = rows.map((row) => ({
     cloneId: row.cloneId,
     slug: row.clone.slug,
     cloneName: row.clone.name,
@@ -278,7 +342,54 @@ export async function loadRankedClones(
     sampleSize: row.sampleSize,
     rankLevel: rankLevelFor(row.sampleSize),
     mostCommon: mostCommonOf(row.cloneId, row.sampleSize),
+    pid: row.clone.catalogueSourcePid,
+    source: "live-census" as const,
+    upVotes: null,
+    downVotes: null,
+    kind: "clone" as const,
+    valueScore: valueById.get(row.cloneId) ?? null,
+    originalValueScore: targetValue,
+    priceCaptures: pricesById.get(row.cloneId) ?? [],
+    originalPriceCaptures: targetPrice,
+    houseId: row.clone.house.id,
   }));
+
+  const seenClones = new Set(entries.map((e) => e.cloneId));
+  for (const edge of edges) {
+    if (seenClones.has(edge.cloneId)) continue;
+    const total = edge.upVotes + edge.downVotes;
+    // closeness = share of voters who said it reminds them of the original
+    const score = total > 0 ? Math.round((edge.upVotes / total) * 100) : 0;
+    entries.push({
+      cloneId: edge.clone.id,
+      slug: edge.clone.slug,
+      cloneName: edge.clone.name,
+      houseName: edge.clone.house.name,
+      score,
+      sampleSize: total,
+      rankLevel: rankLevelFor(total),
+      mostCommon: null,
+      pid: edge.clone.catalogueSourcePid,
+      source: "smell-alike-votes",
+      upVotes: edge.upVotes,
+      downVotes: edge.downVotes,
+      valueScore: valueById.get(edge.clone.id) ?? null,
+      originalValueScore: targetValue,
+      priceCaptures: pricesById.get(edge.clone.id) ?? [],
+      originalPriceCaptures: targetPrice,
+      houseId: edge.clone.house.id,
+      // same-house pairs are flankers and concentration siblings, not clones.
+      // both-designer-priced pairs are two originals that smell alike, which
+      // is a peer relation, not a copy.
+      kind:
+        edge.source === "corpus-smell-alike-sibling"
+          ? "sibling"
+          : edge.source === "corpus-smell-alike-peer"
+            ? "peer"
+            : "clone",
+    });
+    seenClones.add(edge.clone.id);
+  }
 
   // curated edges without any vote yet join the list as explicitly unranked
   // (sampleSize 0) rather than vanishing: the census shows its own blanks
@@ -293,10 +404,10 @@ export async function loadRankedClones(
       id: true,
       slug: true,
       name: true,
-      house: { select: { name: true } },
+      catalogueSourcePid: true,
+      house: { select: { name: true, id: true } },
     },
   });
-  const seenClones = new Set(entries.map((e) => e.cloneId));
   for (const frag of curated) {
     if (seenClones.has(frag.id)) continue;
     entries.push({
@@ -308,6 +419,16 @@ export async function loadRankedClones(
       sampleSize: 0,
       rankLevel: "none",
       mostCommon: null,
+      pid: frag.catalogueSourcePid,
+      source: "live-census",
+      upVotes: null,
+      downVotes: null,
+      kind: "clone" as const,
+      valueScore: valueById.get(frag.id) ?? null,
+      originalValueScore: targetValue,
+      priceCaptures: pricesById.get(frag.id) ?? [],
+      originalPriceCaptures: targetPrice,
+      houseId: frag.house.id,
     });
   }
 

@@ -5,7 +5,8 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createPrismaClient, type PrismaInstance } from "@/lib/prisma";
-import { importCatalogRecords, searchCatalogInDb } from "@/server/catalog";
+import { importCatalogRecords } from "@/server/catalog";
+import { searchCatalogue } from "@/server/catalogueSearch";
 import { mapFragDBCatalog } from "../../src/ingest/fragdb";
 import type { MappedCatalogFragrance } from "../../src/ingest/fragdb";
 import { readFileSync } from "node:fs";
@@ -69,14 +70,14 @@ describe("importCatalogRecords", () => {
       accordsCsv: readFileSync(join(samples, "accords.csv"), "utf8"),
     });
     await importCatalogRecords(prisma, catalog.records);
-    const hits = await searchCatalogInDb(prisma, "light blue");
+    const hits = await searchCatalogue(prisma, "light blue");
     expect(hits).toHaveLength(1);
-    expect(hits[0].fragrance.name).toBe("Light Blue");
-    expect(hits[0].fragrance.house.name).toBe("Dolce&Gabbana");
+    expect(hits[0].name).toBe("Light Blue");
+    expect(hits[0].house).toBe("Dolce&Gabbana");
   });
 
   it("caps results at the domain limit", async () => {
-    const hits = await searchCatalogInDb(prisma, "frag");
+    const hits = await searchCatalogue(prisma, "frag", { limit: 20 });
     expect(hits.length).toBeLessThanOrEqual(20);
     expect(hits.length).toBeGreaterThan(0);
   });

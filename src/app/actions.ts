@@ -8,11 +8,14 @@
 
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
-import { signIn, auth } from "@/lib/auth";
+import { signIn, signOut, auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { registerUser, saveOnboarding, verifyCredentials } from "@/server/users";
+import { addItem } from "@/server/collection";
 
-const REDIRECT_AFTER = "/shelf";
+// Both the shelf and the picks live here, but the picks page is the one
+// that answers "what next", so that is where an account opens.
+const REDIRECT_AFTER = "/";
 
 function messageFor(error: unknown): string {
   if (error instanceof AuthError) {
@@ -81,5 +84,41 @@ export async function saveOnboardingAction(formData: FormData): Promise<string |
     const cause = error instanceof Error ? error.message : "Saving failed.";
     return cause.replace(/^onboarding: /, "");
   }
-  redirect("/shelf");
+
+  // A bottle named during setup becomes a shelf row. The feed reasons from
+  // bottles it can name ("Like X, which you own"), so this is the single
+  // sharpest signal setup can collect. It is optional, and a failure here
+  // must not cost the reader the answers they just gave.
+  const lovedId = String(formData.get("lovedFragranceId") ?? "");
+  if (lovedId !== "") {
+    try {
+      const loved = await prisma.fragrance.findUnique({
+        where: { id: lovedId },
+        select: { id: true },
+      });
+      const already =
+        loved === null
+          ? null
+          : await prisma.collectionItem.findFirst({
+              where: { userId: session.user.id, fragranceId: loved.id },
+              select: { id: true },
+            });
+      if (loved !== null && already === null) {
+        await addItem(prisma, session.user.id, { fragranceId: loved.id, sizeMl: null });
+      }
+    } catch {
+      // the answers are saved; setup must not stall on a bottle
+    }
+  }
+
+  // straight into the picks, not the shelf: the reader just told the census
+  // what they smell and what they like, so show what it does with that
+  redirect("/");
+}
+
+/**
+ * Sign out and land on the public home, where a visitor can start over.
+ */
+export async function signOutAction(): Promise<void> {
+  await signOut({ redirectTo: "/" });
 }

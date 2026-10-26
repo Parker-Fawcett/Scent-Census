@@ -1,10 +1,12 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { computeShelfWorth } from "@/server/marketData";
 import { listCollection, type CollectionRow } from "@/server/collection";
+import { BottleThumb } from "@/components/BottleThumb";
 import type { ShelfSummary } from "@/domain/worth";
 import { removeBottleAction } from "./removeAction";
 
@@ -18,32 +20,43 @@ function BottleCard({ row, summary }: { row: CollectionRow; summary: ShelfSummar
       : null;
 
   return (
-    <li style={{ padding: "0.75rem 0", borderBottom: "1px solid #eee" }}>
-      <strong>{row.fragrance.name}</strong>
-      {" · "}
-      {row.fragrance.house.name}
-      {row.sizeMl !== null ? ` · ${row.sizeMl}ml` : ""}
-      <div>
-        {bottle && bottle.midCents !== null ? (
-          <>
-            {bottle.status === "thin" ? "thin data: " : ""}
-            asking {cents(bottle.lowCents ?? 0)} to {cents(bottle.highCents ?? 0)} (eBay asks)
-          </>
-        ) : (
-          "no confident price"
-        )}
-        {row.pricePaidCents !== null ? (
-          <>
-            {" · you paid "}
-            {cents(row.pricePaidCents)}
-            {rented ? ` on ${rented}` : ""}
-          </>
-        ) : null}
+    <li>
+      <div className="shelf-row">
+        <Link
+          href={`/fragrance/${row.fragrance.slug}`}
+          className="census-thumb"
+          aria-label={row.fragrance.name}
+        >
+          <BottleThumb pid={row.fragrance.catalogueSourcePid} name={row.fragrance.name} />
+        </Link>
+        <div style={{ minWidth: 0 }}>
+          <strong><Link href={`/fragrance/${row.fragrance.slug}`}>{row.fragrance.name}</Link></strong>
+          {" · "}
+          {row.fragrance.house.name}
+          {row.sizeMl !== null ? ` · ${row.sizeMl}ml` : ""}
+          <div>
+            {bottle && bottle.midCents !== null ? (
+              <>
+                {bottle.status === "thin" ? "thin data: " : ""}
+                asking {cents(bottle.lowCents ?? 0)} to {cents(bottle.highCents ?? 0)} (eBay asks)
+              </>
+            ) : (
+              "no confident price"
+            )}
+            {row.pricePaidCents !== null ? (
+              <>
+                {" · you paid "}
+                {cents(row.pricePaidCents)}
+                {rented ? ` on ${rented}` : ""}
+              </>
+            ) : null}
+          </div>
+          <form action={removeBottleAction} style={{ marginTop: "0.35rem" }}>
+            <input type="hidden" name="itemId" value={row.id} />
+            <button type="submit" className="quiet">Remove</button>
+          </form>
+        </div>
       </div>
-      <form action={removeBottleAction}>
-        <input type="hidden" name="itemId" value={row.id} />
-        <button type="submit">Remove</button>
-      </form>
     </li>
   );
 }
@@ -67,61 +80,104 @@ async function ShelfData() {
 
   if (rows.length === 0) {
     return (
-      <section>
-        <h2>Your shelf is empty</h2>
-        <p>
-          Add a bottle and your homepage starts working from it. The shelf is
-          the taste signal; there is no other onboarding step waiting for you.
+      <div className="empty" style={{ marginTop: "2rem" }}>
+        <p className="title">Your shelf is empty</p>
+        <p className="sub">
+          Add one bottle and the homepage starts earning its keep. The shelf is
+          the entire taste signal here, so there is no questionnaire waiting
+          behind another click. Small sizes count. Partials count. Guilty
+          pleasure bottles count too.
         </p>
-      </section>
+        <p className="fine" style={{ marginTop: "0.75rem" }}>
+          Rough estimates of what you paid are welcome.
+        </p>
+      </div>
     );
   }
 
   const worth = summary.totalWorthCents;
   return (
-    <section>
-      <h2>Worth summary</h2>      <p>
-        {worth !== null ? (
-          <>
-            Estimated worth {summary.bottlesWithMarket} of {summary.bottlesTotal} bottles
-            with market data: {cents(worth.low)} to {cents(worth.high)} (mid{" "}
-            {cents(worth.mid)}){" "}
-          </>
-        ) : (
-          <>No market data for any bottle yet. </>
-        )}
-        {summary.costBasisCents !== null ? (
-          <>Cost basis {cents(summary.costBasisCents)}. </>
-        ) : (
-          <>No purchase prices entered yet. </>
-        )}
-        {summary.deltaCents !== null ? <>Delta {cents(summary.deltaCents)} (mid worth minus what you paid)</> : null}
-      </p>
-      <p style={{ color: "#666", fontSize: "0.9rem" }}>
-        Ranges are trimmed means over live eBay asking prices, 30 day window.
-        Asking prices, not sold prices.
-      </p>
+    <>
+      <section className="rule-heavy">
+        <p className="label">Worth summary</p>
+        <p style={{ marginTop: "0.75rem" }}>
+          {worth !== null ? (
+            <>
+              Estimated worth {summary.bottlesWithMarket} of {summary.bottlesTotal} bottles
+              with market data: {cents(worth.low)} to {cents(worth.high)} (mid{" "}
+              {cents(worth.mid)}){" "}
+            </>
+          ) : (
+            <>No market data for any bottle yet. </>
+          )}
+          {summary.costBasisCents !== null ? (
+            <>Cost basis {cents(summary.costBasisCents)}. </>
+          ) : (
+            <>No purchase prices entered yet. </>
+          )}
+          {summary.deltaCents !== null ? <>Delta {cents(summary.deltaCents)} (mid worth minus what you paid)</> : null}
+        </p>
+        <p className="fine" style={{ marginTop: "0.75rem" }}>
+          Ranges are trimmed means over live asking prices, 30 day window.
+          Asking prices, not sold prices.
+        </p>
+      </section>
 
-      <h2>Shelf</h2>
-      <ul style={{ padding: 0, listStyle: "none" }}>
-        {rows.map((row) => (
-          <BottleCard key={row.id} row={row} summary={summary} />
-        ))}
-      </ul>
-    </section>
+      <section className="rule-heavy" style={{ marginTop: "3rem" }}>
+        <p className="label">Shelf</p>
+        <ul className="index-list" style={{ marginTop: "1rem" }}>
+          {rows.map((row) => (
+            <BottleCard key={row.id} row={row} summary={summary} />
+          ))}
+        </ul>
+      </section>
+    </>
   );
 }
 
-export default function ShelfPage() {
+// These pages depend on runtime data (the census, prices, a family graph),
+// so they render per request instead of being prerendered at build time. A
+// prerendered shell goes stale the moment the data changes, and the CDN then
+// serves a shell whose flight payload references chunks from a build that no
+// longer exists. The result is a page that streams its content and never
+// renders it: the reader sees "Loading..." forever while the server response
+// looks perfectly fine.
+//
+// With Cache Components enabled, "instant = false" allows this route to
+// block on request-time data instead of being prerendered, and connection()
+// at the page level is what makes it request-time.
+export const instant = false;
+
+export default async function ShelfPage() {
+  // This page depends on runtime data (the census, prices, a family graph),
+  // so it renders per request. A build-time prerender goes stale the moment
+  // the data changes, and the CDN then serves a shell whose flight payload
+  // references chunks from a build that no longer exists. The result is a page
+  // that streams its content and never renders it: the reader sees
+  // "Loading..." forever while the server response looks perfectly fine.
+  //
+  // With Cache Components enabled, connection() at the page level is what
+  // makes the route request-time.
+  await connection();
   return (
-    <main style={{ maxWidth: 640, margin: "3rem auto", padding: "0 1rem" }}>
-      <h1>Your shelf</h1>
-      <p>
-        <a href="/shelf/add">Add a bottle</a>
-      </p>
-      <Suspense fallback={<p>Loading your shelf...</p>}>
+    <main className="page">
+      <header className="page-head">
+        <p className="label">Your collection</p>
+        <h1 className="page-title">Your shelf</h1>
+        <p className="lede" style={{ marginTop: "1rem" }}>
+          Every bottle you own, and what it is worth against live asking
+          prices.
+        </p>
+        <p style={{ marginTop: "1.5rem", display: "flex", gap: "1.25rem", alignItems: "center" }}>
+          <a href="/shelf/add" className="btn secondary">Add a bottle</a>
+          <Link href="/" className="textlink">Your picks</Link>
+        </p>
+      </header>
+      <div style={{ marginTop: "2.5rem" }}>
+      <Suspense fallback={<p className="loading">Loading your shelf…</p>}>
         <ShelfData />
       </Suspense>
+      </div>
     </main>
   );
 }

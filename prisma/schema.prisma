@@ -78,6 +78,132 @@ enum PriceSource {
   RETAIL_FEED
 }
 
+// Where a clone claim came from. A seller's own "inspired by" line is the
+// strongest kind: it is the maker naming the reference, on the record.
+enum ClaimType {
+  HOUSE_DECLARED
+  COMMUNITY_LIST
+  EDITORIAL
+}
+
+// Whether the census can measure the pair. Most claims cannot: the product is
+// sold by a house the corpus does not carry, or it is carried with no votes.
+enum ClaimStatus {
+  MEASURED
+  UNMEASURED
+  OUTSIDE_CATALOGUE
+}
+
+// A retailer we send traffic to and get prices from. The relationship is
+// two-way on purpose: they give us a price feed and affiliate links, we give
+// them high-intent traffic from people who have already decided what they
+// want. Nothing here can affect a census ranking, ever.
+model Partner {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  // the affiliate network this partner belongs to, so a link can be built
+  // per network (cj, rakuten, impact, direct)
+  network       String   @default("direct")
+  // our affiliate identifier at that network
+  affiliateId   String?
+  baseUrl       String
+  // whether we are allowed to link out to them at all
+  active        Boolean  @default(true)
+  // commission per thousand clicks on a link, in basis points of revenue
+  // (500 = 5%). Kept so a later revenue report does not need a new schema.
+  commissionBps Int      @default(0)
+  // whether this partner has signed a deal to buy ad placement. No ad
+  // renders without it, so the inventory cannot be faked.
+  paysForAds   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  prices  PricePoint[]
+  links   PartnerLink[]
+  pickups CreatorPickup[]
+  adSlots AdSlot[]
+}
+
+// A tracked outbound link to a partner, for one fragrance. The click id is
+// what makes the traffic countable.
+model PartnerLink {
+  id          String   @id @default(cuid())
+  partnerId   String
+  partner     Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  fragranceId String
+  fragrance   Fragrance @relation(fields: [fragranceId], references: [id], onDelete: Cascade)
+  // where on the page the link sat, so a report can tell a shelf link from
+  // a census-row link
+  placement   String   @default("row")
+  // our click id, appended to the outbound url
+  clickId     String
+  // how many times this link was clicked
+  clicks      Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([partnerId, fragranceId, placement, clickId])
+  @@index([fragranceId])
+  @@index([partnerId])
+}
+
+// A creator we send traffic to, who sends us their dupe reviews. The
+// relationship is a swap, not a buy: they need a citable census page, we
+// need their verdict on the record.
+model CreatorPartnership {
+  id        String   @id @default(cuid())
+  creatorId String
+  creator   Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  // the platform the partnership runs on (youtube, tiktok, instagram)
+  platform  String
+  // where we send them: the census page for their signature scent
+  sendsTo   String?
+  // where they send us: the channel url
+  channelUrl String?
+  // what they get from us. A census page they can cite is worth more to a
+  // reviewer than cash, because the citation is the durable part.
+  givesCensusPage Boolean @default(true)
+  revenueShareBps  Int     @default(0)
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+
+  @@unique([creatorId, platform])
+}
+
+// An advertisement slot. Placement is by page type, never by ranking
+// position, and a slot is suppressed when the sponsor is the house behind
+// the fragrance on the page or any clone in that page's family, so a brand
+// can never buy attention next to the list of copies of its own scent.
+model AdSlot {
+  id         String   @id @default(cuid())
+  // the page type this slot renders on: page-bottom, below-fold, creator-page
+  placement  String
+  headline   String
+  body       String
+  ctaText    String
+  ctaUrl     String
+  // who is paying: a fragrance house for house ads, null for a company ad
+  sponsorHouseId String?
+  sponsorHouse   House?  @relation(fields: [sponsorHouseId], references: [id])
+  // the partner who bought this placement. An ad with no paying partner
+  // does not render, which is what keeps the inventory honest: seeded
+  // slots are fake ads, and a fake ad is a lie with a logo on it.
+  sponsorPartnerId String?
+  sponsorPartner   Partner? @relation(fields: [sponsorPartnerId], references: [id])
+  // the fragrance this ad promotes, if it promotes one. A house ad always
+  // names the scent it is selling, so the exclusion rule can tell an ad for
+  // scent X from a census row for scent X.
+  fragranceId    String?
+  fragrance      Fragrance? @relation(fields: [fragranceId], references: [id])
+  startsAt   DateTime @default(now())
+  endsAt     DateTime?
+  impressions Int     @default(0)
+  clicks      Int     @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([placement, startsAt])
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -151,6 +277,8 @@ model House {
   tier               HouseTier
   // Stable id from the catalogue source (FragDB brand id) for refresh joins.
   catalogueSourcePid String?
+  // ad slots this house sponsors, if any
+  adSlots         AdSlot[]
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -186,8 +314,21 @@ model Fragrance {
   inspiredById   String?
   inspiredBy     Fragrance?     @relation("CloneOf", fields: [inspiredById], references: [id])
   inspiredClones Fragrance[]    @relation("CloneOf")
+  seedsAsClone   CommunitySeed[] @relation("SeedClone")
+  seedsAsTarget  CommunitySeed[] @relation("SeedTarget")
   // stable FragDB pid for release diffs and refresh joins
   catalogueSourcePid String? @unique
+  // corpus popularity magnitude (engagement score). The source smell-alike
+  // relation carries NO direction information, so this is the objective
+  // signal for which side of a pair is the original: the original is the
+  // more popular fragrance.
+  popularityMagnitude Int?
+  // community price-perception vote (1 = way overpriced, 5 = great value).
+  // This is the strongest direction signal available: a copy is a fragrance
+  // people think is CHEAP, so the copy has the HIGHER score. A pair where
+  // both sides read as expensive (both under 2.6) is not a clone relation
+  // at all but two designer originals that happen to smell alike.
+  priceValue Float?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -195,6 +336,8 @@ model Fragrance {
   collectionItems   CollectionItem[]
   votes             Vote[]
   pricePoints       PricePoint[]
+  partnerLinks      PartnerLink[]
+  adSlots           AdSlot[]
   estimate          FragranceEstimate?
   cloneVotesAsClone CloneVote[]        @relation("CloneVoteClone")
   cloneVotesAsTarget CloneVote[]       @relation("CloneVoteTarget")
@@ -205,6 +348,71 @@ model Fragrance {
   // shares neighborhood comparisons), canon stays on inspiredById above
   inspiredEdgesAsClone  InspiredByEdge[] @relation("InspiredEdgeClone")
   inspiredEdgesAsTarget InspiredByEdge[] @relation("InspiredEdgeTarget")
+  claimsAsTarget        CloneClaim[]     @relation("ClaimTarget")
+  claimsAsClone         CloneClaim[]     @relation("ClaimClone")
+}
+
+// A public claim that one product copies another, with provenance.
+//
+// Claims are deliberately NOT votes and never join a closeness percentage.
+// A dupe house naming its reference tells you what the seller intends, not
+// how close the bottle lands. The only number a claim carries is noteMatch:
+// how much of the original's published note pyramid the product also
+// publishes, computed by src/domain/cloneClaims.ts. That is reproducible from
+// two public listings and is labeled as a note comparison wherever it shows.
+//
+// Claims are how a scent sold outside the Fragrantica corpus can appear on
+// the site at all. Without them the census is silent about every Montagne,
+// every ALT, every perfume-parlour oil, and silence reads as "no clone exists".
+model CloneClaim {
+  id              String      @id @default(cuid())
+  targetId        String
+  target          Fragrance   @relation("ClaimTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  // set when the claimed product is in our catalogue, so the row can link
+  // to its product page and borrow its curated note pyramid
+  cloneId         String?
+  clone           Fragrance?  @relation("ClaimClone", fields: [cloneId], references: [id], onDelete: SetNull)
+  // always present: the product as the seller names it
+  productName     String
+  houseName       String
+  claimType       ClaimType
+  status          ClaimStatus @default(UNMEASURED)
+  // where we read the claim, and when. Both are public on the page.
+  sourceLabel     String
+  sourceUrl       String
+  verifiedOn      DateTime
+  // the seller's published note list, normalized to plain note names. Only
+  // filled for products outside the catalogue; inside it we read the DB.
+  notes           String[]    @default([])
+  // computed overlap with the target's prominent notes, 0 to 100. Never a
+  // vote, never a closeness score, never sortable against one.
+  noteMatch       Int?
+  // Scent family match: 50% accord cosine + 50% note Jaccard. This is the
+  // closest thing to "how close does it smell" that we can compute from
+  // public data. It measures material and family overlap, not voter memory.
+  familyMatch     Int?
+  // One line from owners' reviews about how it differs from the original.
+  // Sourced from Reddit, Fragrantica reviews, and blog comparisons.
+  textureNote     String?
+  // Raw smell-alike votes from the corpus snapshot when the pair exists but
+  // sits below the census agreement floor. These rows are the rejected pile:
+  // people did compare the bottles, and most said no. Storing them here keeps
+  // the claim honest without letting a 35 percent pair into the ranked census.
+  measuredUp      Int?
+  measuredDown    Int?
+  // a source's own similarity number, kept verbatim and attributed. We do not
+  // parse it, average it, or let it enter any ranking.
+  claimedSimilarity String?
+  // cheapest verified entry offer, so the value gap can render
+  priceCents      Int?
+  sizeMl          Int?
+  currency        String?
+  discontinued    Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@unique([targetId, houseName, productName])
+  @@index([targetId, status])
 }
 
 model FragranceNote {
@@ -285,8 +493,12 @@ model PricePoint {
   priceCents      Int
   capturedAt      DateTime
   sourceListingId String?
+  // which partner this capture came from, when it came from a partner feed
+  partnerId       String?
+  partner         Partner?    @relation(fields: [partnerId], references: [id])
 
   @@index([fragranceId, capturedAt])
+  @@index([partnerId])
 }
 
 model FragranceEstimate {
@@ -333,19 +545,60 @@ model CloneRollup {
   @@unique([cloneId, targetId])
 }
 
+// Seeded community consensus: a labeled, sourced baseline for a clone pair
+// that is NEVER counted as a user vote. It exists so a new census reads as
+// something instead of nothing, while staying honest about provenance.
+// source/sourceUrl/methodology are public-facing; sampleSize is the number of
+// community data points cited (null when the value is qualitative).
+model CommunitySeed {
+  id          String   @id @default(cuid())
+  cloneId     String
+  clone       Fragrance @relation("SeedClone", fields: [cloneId], references: [id], onDelete: Cascade)
+  targetId    String
+  target      Fragrance @relation("SeedTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  bucket      CensusBucket
+  score       Int
+  confidence  String   // "high" | "medium" | "low"
+  sampleSize  Int?
+  source      String
+  sourceUrl   String?
+  methodology String
+  seededAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([cloneId, targetId])
+  @@index([targetId])
+}
+
 // Curated census coverage: one row per approved clone->original pair. The
 // canon edge (inspiredById) stays single-valued for display and the feed
 // pools; this table carries the full neighborhood so a target's census lists
 // every clone the curation approves, not only one flagship.
+// Curated census coverage: one row per approved clone->original pair. The
+// canon edge (inspiredById) stays single-valued for display and the feed
+// pools; this table carries the full neighborhood so a target's census lists
+// every clone the curation approves, not only one flagship.
+//
+// The smell-alike relation is sourced from the corpus snapshot's
+// "reminds me of" field: each pair carries how many community votes said
+// the clone reminds people of the original (upVotes) and how many said it
+// does not (downVotes). Those are REAL counts, so the census can show a
+// measured closeness and a sample size from day one instead of an empty list.
 model InspiredByEdge {
   cloneId   String
   clone     Fragrance @relation("InspiredEdgeClone", fields: [cloneId], references: [id], onDelete: Cascade)
   targetId  String
   target    Fragrance @relation("InspiredEdgeTarget", fields: [targetId], references: [id], onDelete: Cascade)
-  createdAt DateTime  @default(now())
+  // community votes: "this clone reminds me of the original" / "it does not"
+  upVotes   Int      @default(0)
+  downVotes Int      @default(0)
+  // where the pair came from, so the page can be honest about provenance
+  source    String   @default("corpus-smell-alike")
+  createdAt DateTime @default(now())
 
   @@id([cloneId, targetId])
   @@index([targetId])
+  @@index([upVotes])
 }
 
 // Creator accounts are claim-based (PRD section 7.7): we invite, they claim.
@@ -363,6 +616,7 @@ model Creator {
   updatedAt   DateTime      @updatedAt
 
   pickups     CreatorPickup[]
+  partnerships CreatorPartnership[]
 }
 
 model Follow {
@@ -388,6 +642,16 @@ model CreatorPickup {
   kind        String   @default("review") // review | pickup
   url         String
   title       String?
+  // the creator's own verdict on how close it is, when they said it. This is
+  // ONE person's opinion and it is labeled as such, separate from the
+  // community vote counts. Never merged, never averaged in.
+  creatorVerdictCents Int?
+  creatorVerdictNote  String?
+  // where the creator sends their audience. Our traffic to them, their
+  // traffic to us, and both sides counted.
+  partnerId   String?
+  partner     Partner? @relation(fields: [partnerId], references: [id])
+  clicks      Int      @default(0)
   createdAt   DateTime @default(now())
 
   @@index([fragranceId])

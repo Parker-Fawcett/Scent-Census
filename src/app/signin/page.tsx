@@ -13,46 +13,85 @@ export default function SignInPage() {
     null,
   );
 
-  const heading = "Scent Census";
-  const intro = "Decide what bottle to add next, from your shelf and your votes.";
+  const heading = "Your shelf, your votes.";
+  const intro = "Track every bottle you own and rate how close each clone smells to the original. Free, email only, about a minute.";
 
   return (
-    <main style={{ maxWidth: 420, margin: "4rem auto", padding: "0 1rem" }}>
-      <h1>{heading}</h1>
-      <p>{intro}</p>
+    <main className="page page-narrow">
+      <header className="page-head">
+        <p className="label">Scent Census</p>
+        <h1 className="page-title">{heading}</h1>
+        <p className="lede">{intro}</p>
+      </header>
 
-      <section style={{ marginTop: "2rem" }}>
-        <h2>Sign in</h2>
+      <section className="rule-heavy" style={{ marginTop: "3rem" }}>
+        <h2 className="title" style={{ fontSize: "1.35rem", marginBottom: "1.25rem" }}>
+          Sign in
+        </h2>
         <form action={onSignIn}>
-          <label>
-            Email
-            <input name="email" type="email" required style={{ width: "100%" }} />
+          <label className="form-field">
+            <span className="form-field-label">Email</span>
+            <input name="email" type="email" required autoComplete="email" />
           </label>
-          <label>
-            Password
-            <input name="password" type="password" required minLength={8} style={{ width: "100%" }} />
+          <label className="form-field">
+            <span className="form-field-label">Password</span>
+            <input
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="current-password"
+            />
           </label>
-          {signInError ? <p role="alert">{signInError}</p> : null}
-          <button type="submit" style={{ width: "100%" }}>
-            Sign in
+          {signInError ? (
+            <p role="alert" className="form-error">
+              {signInError}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            className="btn"
+            style={{ width: "100%", justifyContent: "center", marginTop: "1.75rem" }}
+          >
+            Sign in to your shelf
           </button>
         </form>
       </section>
 
-      <section style={{ marginTop: "2rem" }}>
-        <h2>New here</h2>
+      <section className="rule-heavy" style={{ marginTop: "2.5rem" }}>
+        <h2 className="title" style={{ fontSize: "1.35rem", marginBottom: "0.75rem" }}>
+          New here
+        </h2>
+        <p className="muted" style={{ fontSize: "0.85rem", margin: "0 0 0.75rem" }}>
+          One account covers your shelf, your votes, and your follows. No credit
+          card, no marketing emails.
+        </p>
         <form action={onRegister}>
-          <label>
-            Email
-            <input name="email" type="email" required style={{ width: "100%" }} />
+          <label className="form-field">
+            <span className="form-field-label">Email</span>
+            <input name="email" type="email" required autoComplete="email" />
           </label>
-          <label>
-            Password
-            <input name="password" type="password" required minLength={8} style={{ width: "100%" }} />
+          <label className="form-field">
+            <span className="form-field-label">Password</span>
+            <input
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
           </label>
-          {registerError ? <p role="alert">{registerError}</p> : null}
-          <button type="submit" style={{ width: "100%" }}>
-            Create account
+          {registerError ? (
+            <p role="alert" className="form-error">
+              {registerError}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            className="btn secondary"
+            style={{ width: "100%", justifyContent: "center", marginTop: "1.75rem" }}
+          >
+            Create an account
           </button>
         </form>
       </section>

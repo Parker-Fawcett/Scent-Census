@@ -125,7 +125,7 @@ async function buildFeedPageInner(
     knownAccords.length > 0
       ? prisma.fragrance.findMany({
           where: { OR: [{ accords: { hasSome: knownAccords } }, { inspiredById: { in: shelfIds } }] },
-          include: candidateInclude,
+          select: candidateSelect,
           take: TASTE_POOL_SIZE,
           // deterministic per-user sample position, same reasoning as the
           // contrast pool: without it every sweet-pref user saw the same 300
@@ -137,7 +137,7 @@ async function buildFeedPageInner(
     knownAccords.length > 0
       ? prisma.fragrance.findMany({
           where: contrastWhere,
-          include: candidateInclude,
+          select: candidateSelect,
           take: CONTRAST_POOL_SIZE,
           skip: sampleSkip(userId, knownAccords, contrastCount, CONTRAST_POOL_SIZE),
           orderBy: { id: "asc" },
@@ -192,7 +192,17 @@ async function buildFeedPageInner(
   return { cards };
 }
 
-const candidateInclude = {
+// A select, not an include. Prisma's include only takes relation fields,
+// and the feed needs the catalogue photo id so a pick can be recognised by
+// sight.
+const candidateSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  year: true,
+  inspiredById: true,
+  catalogueSourcePid: true,
+  accords: true,
   house: { select: { id: true, name: true, slug: true, tier: true } },
   notes: { include: { note: { select: { name: true } } }, orderBy: { weight: "desc" as const } },
   estimate: true,
@@ -204,6 +214,7 @@ type CandidateRow = {
   name: string;
   year: number | null;
   inspiredById: string | null;
+  catalogueSourcePid: string | null;
   accords: string[];
   house: { id: string; name: string; slug: string; tier: string };
   notes: Array<{ weight: number; note: { name: string } }>;
@@ -224,6 +235,7 @@ function toCandidate(row: CandidateRow): FeedCandidate {
     accordNames: row.accords,
     noteNames: row.notes.slice(0, 6).map((n) => n.note.name),
     inspiredById: row.inspiredById,
+    catalogueSourcePid: row.catalogueSourcePid ?? null,
     estimateCentsLow: row.estimate?.lowCents ?? null,
     estimateCentsHigh: row.estimate?.highCents ?? null,
     year: row.year,
@@ -272,7 +284,7 @@ async function sampledWithoutAccords(
   if (total === 0) return [];
   const skip = makeJitterSeed(`contrast-empty-${userId}`) % Math.max(total - CONTRAST_POOL_SIZE, 1);  return prisma.fragrance.findMany({
     where,
-    include: candidateInclude,
+    select: candidateSelect,
     take: CONTRAST_POOL_SIZE,
     skip,
     orderBy: { id: "asc" },

@@ -64,17 +64,6 @@ export function clearCloneVote(
   );
 }
 
-function trimmedMean(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  if (sorted.length < 10) {
-    // below 10 points the tails are the most honest information present
-    return sorted.reduce((sum, v) => sum + v, 0) / sorted.length;
-  }
-  const k = Math.max(1, Math.floor(sorted.length * 0.1));
-  const trimmed = sorted.slice(k, sorted.length - k);
-  return trimmed.reduce((sum, v) => sum + v, 0) / trimmed.length;
-}
-
 export function rollupCensus(
   votes: CloneVotePair[],
   opts?: { lowVotes?: number; confidentVotes?: number },
@@ -97,7 +86,13 @@ export function rollupCensus(
     (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
   )[0][0];
 
-  const score = Math.round(trimmedMean(votes.map((v) => BUCKET_VALUES[v.bucket])));
+  // The score is the average bucket value of all votes — spot on is 95,
+  // close is 80, similar is 60, same family is 35, not close is 10. A single
+  // close vote reads 80, not 100; the bar fills in proportion to how close
+  // voters actually said it is.
+  const score = Math.round(
+    votes.reduce((sum, v) => sum + BUCKET_VALUES[v.bucket], 0) / votes.length,
+  );
   const rankLevel: RankLevel =
     votes.length >= confidentVotes ? "confident" : votes.length >= lowVotes ? "low" : "none";
 

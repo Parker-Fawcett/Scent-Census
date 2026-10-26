@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -13,10 +14,13 @@
     "seed:catalog": "tsx scripts/seed-catalog.ts --env-file=.env",
     "ingest:catalog": "npm run ingest:fragrantica --",
     "ingest:fragrantica": "tsx scripts/ingest-fragrantica.ts --env-file=.env",
+    "ingest:smell-alike": "tsx scripts/ingest-smell-alike.ts --file data/kaggle-fragrantica/ledecanteur/perfumes.jsonl",
+    "verify:smell-alike": "tsx scripts/verify-smell-alike-direction.ts",
     "census:candidates": "tsx scripts/census-candidates.ts --env-file=.env",
     "curation:load": "tsx scripts/load-clone-edges.ts",
     "seed:creators": "tsx scripts/seed-creators.ts --env-file=.env",
-    "test:e2e": "DATABASE_URL=postgresql://scent:scent-test@localhost:5545/scent_test AUTH_SECRET=e2e-only-secret-not-for-prod npx prisma migrate deploy && playwright test"
+    "test:e2e": "DATABASE_URL=postgresql://scent:scent-test@localhost:5545/scent_test AUTH_SECRET=e2e-only-secret-not-for-prod npx prisma migrate deploy && playwright test",
+    "capture:prices": "tsx scripts/capture-retail-prices.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -31,12 +35,14 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "prisma": "^6.19.3",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^4.1.12"

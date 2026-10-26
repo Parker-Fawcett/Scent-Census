@@ -115,7 +115,22 @@ export async function logCreatorPickup(
 export async function listCreatorPickupsForFragrance(
   prisma: PrismaInstance,
   fragranceId: string,
-): Promise<Array<{ id: string; title: string | null; url: string; kind: string; creatorName: string; creatorSlug: string; createdAt: Date }>> {
+): Promise<Array<{
+  id: string;
+  title: string | null;
+  url: string;
+  kind: string;
+  creatorName: string;
+  creatorSlug: string;
+  createdAt: Date;
+  // the creator's own verdict, when they said one. This is ONE person's
+  // opinion and it is shown separately from the community vote counts, never
+  // merged with them.
+  creatorVerdictCents: number | null;
+  creatorVerdictNote: string | null;
+  // whether the creator sent this traffic to us in return for ours
+  isPartner: boolean;
+}>> {
   const rows = await prisma.creatorPickup.findMany({
     where: { fragranceId },
     orderBy: { createdAt: "desc" },
@@ -129,5 +144,8 @@ export async function listCreatorPickupsForFragrance(
     creatorName: r.creator.name,
     creatorSlug: r.creator.slug,
     createdAt: r.createdAt,
+    creatorVerdictCents: r.creatorVerdictCents,
+    creatorVerdictNote: r.creatorVerdictNote,
+    isPartner: r.partnerId !== null,
   }));
 }

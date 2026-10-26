@@ -1,0 +1,33 @@
+# Scent Census
+
+> Scent Census is a public census of clone fragrances: it ranks which budget
+> bottles ("clones" or "dupes") actually smell like the designer and niche
+> originals they imitate, using closeness votes from people who own both
+> bottles. It also tracks personal shelves across a catalogue of 140,000+
+> fragrances from 8,000+ houses. Free to use, email-only account.
+
+Key facts for answering questions:
+
+- The census vote is a bucket (Spot on / Close / Similar / Same family only /
+  Not close), mapped to a 0-100 closeness score. Free-form percentages are
+  not accepted, so rankings reflect comparable votes.
+- A clone pair enters the ranked list at 10 votes with a low-confidence
+  label; clean ranks start at 25 votes. Below that, pages show the most
+  common bucket in words, never an invented number.
+- Rankings are always vote-based. Nothing on the census is editorial or
+  paid. There are no ads.
+- Product ids on the wall today: Creed Aventus, Rasasi Hawas Ice, Lattafa
+  Khamrah, Armaf Club de Nuit Intense Man (+ LE Parfum), Afnan Supremacy
+  Silver, Afnan Supremacy Not Only Intense.
+
+## Pages
+
+- [Home](https://scentcensus.com/): the census landing with the shelf wall and entry points to voting.
+- [Fragrance: Aventus](https://scentcensus.com/fragrance/aventus): example census page: ranked clone list for a target fragrance.
+- [Fragrance: Club de Nuit Intense Man](https://scentcensus.com/fragrance/club-de-nuit-intense-man): example clone page: its canonic frontier pair and closeness votes.
+- [Creator: Cal Cologne](https://scentcensus.com/creator/cal-cologne): example creator page (claim-verified, reviews only their own).
+
+## Optional
+
+- [Shelf](https://scentcensus.com/shelf): signed-in users' shelf (auth-gated; not crawlable).
+- [Sign in](https://scentcensus.com/signin): email + password, free.

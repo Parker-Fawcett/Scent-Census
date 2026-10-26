@@ -1,7 +1,8 @@
-// Onboarding validation (PRD section 7.1): budget band, clone band, 1-3
-// accords. There is no long quiz and no rate-50-fragrances wall; validation
-// lives here so every entry point (server action, API, future app) enforces
-// the same contract, and every field is skippable without freezing state.
+// Onboarding validation. Setup asks for a bottle, 1-3 accords from the
+// census's own family vocabulary, a clone answer and a budget band. There is
+// no long quiz and no rate-50-fragrances wall; validation lives here so every
+// entry point (server action, API, future app) enforces the same contract,
+// and every field is skippable without freezing state.
 
 import { describe, expect, it } from "vitest";
 import { validateOnboarding } from "@/domain/onboarding";
@@ -28,11 +29,25 @@ describe("validateOnboarding", () => {
     expect(() => validateOnboarding({ cloneBand: "sure why not" })).toThrow(/clones/i);
   });
 
-  it("accepts 1-3 unique accords from the fallback list", () => {
+  it("accepts 1-3 unique accords from the family vocabulary", () => {
     const one = validateOnboarding({ accordPrefs: ["woody"] });
     expect(one.accordPrefs).toEqual(["woody"]);
-    const three = validateOnboarding({ accordPrefs: ["fresh", "sweet", "woody"] });
-    expect(three.accordPrefs).toEqual(["fresh", "sweet", "woody"]);
+    const three = validateOnboarding({ accordPrefs: ["citrus", "sweet", "woody"] });
+    expect(three.accordPrefs).toEqual(["citrus", "sweet", "woody"]);
+    const multiWord = validateOnboarding({ accordPrefs: ["warm spicy"] });
+    expect(multiWord.accordPrefs).toEqual(["warm spicy"]);
+  });
+
+  it("accepts the families people actually name", () => {
+    // the old seven-word list offered "gourmand" (119 fragrances in the
+    // catalogue) and none of citrus, powdery, fruity or the spices
+    for (const family of ["citrus", "powdery", "fruity", "warm spicy", "white floral"]) {
+      expect(() => validateOnboarding({ accordPrefs: [family] })).not.toThrow();
+    }
+  });
+
+  it("refuses a family the census does not have", () => {
+    expect(() => validateOnboarding({ accordPrefs: ["gourmand"] })).toThrow(/accord/i);
   });
 
   it("refuses zero accords when accords were provided at all", () => {
@@ -41,7 +56,7 @@ describe("validateOnboarding", () => {
 
   it("refuses more than three accords", () => {
     expect(() =>
-      validateOnboarding({ accordPrefs: ["fresh", "sweet", "woody", "aromatic"] }),
+      validateOnboarding({ accordPrefs: ["citrus", "sweet", "woody", "aromatic"] }),
     ).toThrow(/three/i);
   });
 
