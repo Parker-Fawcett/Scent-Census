@@ -13,7 +13,8 @@
 //
 // The fix is to tell Vercel the cached copy is stale whenever the content
 // changes. A deploy does not do that automatically, so this endpoint is
-// called after a deploy and on a schedule.
+// called after a deploy and on a schedule. Vercel cron sends GET, so GET
+// and POST do the same thing behind the same secret.
 //
 //   curl -X POST https://scentcensus.com/api/revalidate
 //     -H "authorization: Bearer $CRON_SECRET"
@@ -61,3 +62,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     fragrancesWithFamilies: count,
   });
 }
+
+export const GET = POST;

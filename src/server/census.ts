@@ -83,6 +83,13 @@ export async function recomputePairRollup(
   }));
   const rollup = rollupCensus(pairs);
 
+  // no votes means no rollup row: a zero-vote row would sit in front of the
+  // pair's smell-alike counts in loadRankedClones and unrank it
+  if (rollup.sampleSize === 0) {
+    await prisma.cloneRollup.deleteMany({ where: { cloneId, targetId } });
+    return { cloneId, targetId, ...EMPTY_ROLLUP, computedAt: new Date() };
+  }
+
   const counts = new Map<CensusBucket, number>();
   for (const v of pairs) counts.set(v.bucket, (counts.get(v.bucket) ?? 0) + 1);
   const mostCommon =
@@ -139,6 +146,9 @@ export async function saveCloneVote(
   const present = new Set(anchors.map((f) => f.id));
   if (!present.has(cloneId) || !present.has(targetId)) {
     throw new Error("census: unknown fragrance on the clone or target side");
+  }
+  if (!(await isTrackedPair(prisma, cloneId, targetId))) {
+    throw new Error("census: that pair is not tracked, so it cannot be voted on");
   }
 
   // the previous rollup, so the milestone detector can tell a transition
@@ -214,9 +224,31 @@ export async function clearCloneVoteForUser(
   // pair is deliberately silent so the update strip never announces "lost
   // confidence" noise. Revisit if the product wants demotion notices.
   return prisma.$transaction(async (tx) => {
-    await tx.cloneVote.deleteMany({ where: { userId, cloneId, targetId } });
+    const removed = await tx.cloneVote.deleteMany({ where: { userId, cloneId, targetId } });
+    // nothing of this user's to clear: leave the pair's rollup alone
+    if (removed.count === 0) return null;
     return recomputePairRollup(tx, cloneId, targetId);
   });
+}
+
+/** A pair can only be voted on when the census tracks it: a curated
+ * smell-alike edge, or the clone's canon inspiredBy link. */
+export async function isTrackedPair(
+  prisma: PrismaInstance | Prisma.TransactionClient,
+  cloneId: string,
+  targetId: string,
+): Promise<boolean> {
+  const [edge, canon] = await Promise.all([
+    prisma.inspiredByEdge.findUnique({
+      where: { cloneId_targetId: { cloneId, targetId } },
+      select: { cloneId: true },
+    }),
+    prisma.fragrance.findFirst({
+      where: { id: cloneId, inspiredById: targetId },
+      select: { id: true },
+    }),
+  ]);
+  return edge !== null || canon !== null;
 }
 
 /** Explicit unranked state when nothing was ever voted (PRD 7.6). */
@@ -306,6 +338,35 @@ export async function loadRankedClones(
     include: { clone: { select: { id: true, name: true, slug: true, house: { select: { name: true, id: true } }, catalogueSourcePid: true } } },
   });
   const edges0 = edges;
+  const edgeByClone = new Map(edges.map((e) => [e.cloneId, e]));
+
+  // curated edges without any vote yet join the list as explicitly unranked
+  // (sampleSize 0) rather than vanishing: the census shows its own blanks
+  const curated = await prisma.fragrance.findMany({
+    where: {
+      OR: [
+        { inspiredById: targetId },
+        { inspiredEdgesAsClone: { some: { targetId } } },
+      ],
+    },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      catalogueSourcePid: true,
+      house: { select: { name: true, id: true } },
+    },
+  });
+
+  // a live rollup only counts for a pair the census tracks, and only stands
+  // in for the pair's smell-alike counts once it has at least as many votes.
+  // Otherwise one account could unrank a pair measured by a thousand people.
+  const tracked = new Set([...edges.map((e) => e.cloneId), ...curated.map((f) => f.id)]);
+  const liveRows = rows.filter((row) => {
+    if (!tracked.has(row.cloneId) || row.sampleSize === 0) return false;
+    const edge = edgeByClone.get(row.cloneId);
+    return edge === undefined || row.sampleSize >= edge.upVotes + edge.downVotes;
+  });
 
   // the retail prices for every clone and original in play. Only captures
   // near 100ml count, because that is the size clone houses standardize on
@@ -333,7 +394,7 @@ export async function loadRankedClones(
   const valueById = new Map(valueRows.map((v) => [v.id, v.priceValue]));
   const targetValue = valueById.get(targetId) ?? null;
 
-  const entries: RankedClone[] = rows.map((row) => ({
+  const entries: RankedClone[] = liveRows.map((row) => ({
     cloneId: row.cloneId,
     slug: row.clone.slug,
     cloneName: row.clone.name,
@@ -391,23 +452,6 @@ export async function loadRankedClones(
     seenClones.add(edge.clone.id);
   }
 
-  // curated edges without any vote yet join the list as explicitly unranked
-  // (sampleSize 0) rather than vanishing: the census shows its own blanks
-  const curated = await prisma.fragrance.findMany({
-    where: {
-      OR: [
-        { inspiredById: targetId },
-        { inspiredEdgesAsClone: { some: { targetId } } },
-      ],
-    },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      catalogueSourcePid: true,
-      house: { select: { name: true, id: true } },
-    },
-  });
   for (const frag of curated) {
     if (seenClones.has(frag.id)) continue;
     entries.push({

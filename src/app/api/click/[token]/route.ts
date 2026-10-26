@@ -4,16 +4,22 @@
 // The handler is a redirect: it records the click, then sends the visitor to
 // the retailer.
 //
-// The click token is carried in the URL the visitor arrives with, so no
-// lookup is needed to know which partner and which fragrance the click was
-// for. The click count is written to the link row, which is also what makes
-// a revenue report possible later without a new event pipeline.
+// The destination is only ever a partner's own site. The `p` partner slug is
+// required and the `to` url must sit on that partner's host, so this cannot
+// be used as an open redirect to anyone else. The click count is written to
+// the link row, which is also what makes a revenue report possible later
+// without a new event pipeline.
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { clickToken } from "@/domain/affiliate";
 
 interface Params {
   params: Promise<{ token: string }>;
+}
+
+function bad(): NextResponse {
+  return NextResponse.json({ error: "bad destination" }, { status: 400 });
 }
 
 export async function GET(request: Request, { params }: Params): Promise<NextResponse> {
@@ -22,34 +28,38 @@ export async function GET(request: Request, { params }: Params): Promise<NextRes
   const slug = url.searchParams.get("p") ?? "";
   const fragrance = url.searchParams.get("f") ?? "";
   const placement = url.searchParams.get("pl") ?? "row";
+  const destination = url.searchParams.get("to");
+  if (destination === null || slug === "") return bad();
 
-  let destination = url.searchParams.get("to");
-  if (destination === null) {
-    return NextResponse.json({ error: "missing destination" }, { status: 400 });
-  }
-  // only allow redirects we know are ours, so this cannot be used as an open
-  // redirect for someone else's link
+  let parsed: URL;
   try {
-    const parsed = new URL(destination);
-    if (parsed.protocol !== "https:") {
-      return NextResponse.json({ error: "bad destination" }, { status: 400 });
-    }
+    parsed = new URL(destination);
   } catch {
-    return NextResponse.json({ error: "bad destination" }, { status: 400 });
+    return bad();
   }
+  if (parsed.protocol !== "https:") return bad();
 
-  if (slug !== "" && fragrance !== "") {
-    const link = await prisma.partnerLink.findFirst({
-      where: { partner: { slug }, fragrance: { slug: fragrance }, placement },
-      select: { id: true },
+  const partner = await prisma.partner.findUnique({
+    where: { slug },
+    select: { id: true, baseUrl: true, active: true },
+  });
+  if (partner === null || !partner.active) return bad();
+  let partnerHost: string;
+  try {
+    partnerHost = new URL(partner.baseUrl).host;
+  } catch {
+    return bad();
+  }
+  if (parsed.host !== partnerHost) return bad();
+
+  // only count a click whose token is the one we would have rendered, so a
+  // hand-built url cannot inflate the counter for a link it does not match
+  if (fragrance !== "" && token === clickToken(slug, fragrance, placement)) {
+    await prisma.partnerLink.updateMany({
+      where: { partnerId: partner.id, fragrance: { slug: fragrance }, placement },
+      data: { clicks: { increment: 1 } },
     });
-    if (link !== null) {
-      await prisma.partnerLink.update({
-        where: { id: link.id },
-        data: { clicks: { increment: 1 } },
-      });
-    }
   }
 
-  return NextResponse.redirect(destination);
+  return NextResponse.redirect(parsed.toString());
 }

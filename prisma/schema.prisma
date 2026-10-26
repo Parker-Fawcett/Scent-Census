@@ -596,7 +596,10 @@ model InspiredByEdge {
   source    String   @default("corpus-smell-alike")
   createdAt DateTime @default(now())
 
-  @@id([cloneId, targetId])
+  // a unique key, not a primary key, because that is what the migration
+  // created (20261021000000_inspired_edges); lookups by cloneId_targetId work
+  // the same either way
+  @@unique([cloneId, targetId])
   @@index([targetId])
   @@index([upVotes])
 }
@@ -638,7 +641,7 @@ model CreatorPickup {
   creatorId   String
   creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   fragranceId String
-  fragrance   Fragrance @relation(fields: [fragranceId], references: [id])
+  fragrance   Fragrance @relation(fields: [fragranceId], references: [id], onDelete: Cascade)
   kind        String   @default("review") // review | pickup
   url         String
   title       String?
