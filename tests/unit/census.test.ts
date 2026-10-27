@@ -80,12 +80,15 @@ describe("rollupCensus", () => {
     });
   });
 
-  it("trims outliers before scoring: 24 CLOSE + 1 SPOT_ON scores exactly 80", () => {
+  it("score is the average bucket value of all votes", () => {
+    // a single spot-on vote reads 95, not 100
+    expect(rollupCensus([vote(uid(0), "SPOT_ON")]).score).toBe(95);
+    // a single close vote reads 80 — the bar fills to 80%, not 100%
+    expect(rollupCensus([vote(uid(0), "CLOSE")]).score).toBe(80);
+    // mixed votes average: (24 * 80 + 95) / 25 = 80.6 → 81
     const votes = Array.from({ length: 24 }, (_, i) => vote(uid(i), "CLOSE"));
     votes.push(vote(uid(24), "SPOT_ON"));
-    // untrimmed mean is 81.8; trimming 10% off each tail removes the 95 and
-    // enough 80s that the mean lands exactly on 80
-    expect(rollupCensus(votes).score).toBe(80);
+    expect(rollupCensus(votes).score).toBe(81);
   });
 
   it("reports the most common bucket in words for the unranked state", () => {

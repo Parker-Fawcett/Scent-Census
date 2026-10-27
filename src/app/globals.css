@@ -1,49 +1,1803 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@import "tailwindcss";
+
+/* ============================================================
+   SCENT CENSUS — "Editorial specimen"
+   ------------------------------------------------------------
+   The direction, committed: a reference work for fragrance.
+   Warm paper, hairline rules instead of boxes, a serif display
+   face, one vermilion accent for measured numbers and links,
+   and bottle photographs set on mid-tone specimen plates so the
+   white studio background disappears into the plate.
+
+   What this system refuses:
+   - boxes on beige. Containers are earned, not default.
+   - one typeface doing every job. Fraunces for display, Instrument
+     Sans for everything else.
+   - an accent that appears everywhere. Vermilion means "measured".
+   - rounded corners on every element. A 2px radius, or none.
+
+   LAYERING: base element rules live in @layer base, components in
+   @layer components. Unlayered CSS outranks every layer and would
+   beat Tailwind utilities, so nothing here is unlayered except the
+   token blocks.
+   ============================================================ */
+
+@theme {
+  /* The palette. Literal values so Tailwind opacity modifiers
+     (bg-ink/10) still resolve to a real color. */
+  --color-paper: #f2ede1;
+  --color-wall: #f2ede1;
+  --color-wall-light: #faf6ec;
+  --color-paper-deep: #ece6d8;
+  --color-ink: #1d1a14;
+  --color-ink-soft: #564e3f;
+  --color-ink-faint: #6b6350;
+  --color-line: #d5cab4;
+  --color-rule-strong: #b4a78b;
+  --color-accent: #b32c16;
+  --color-accent-bright: #d4451f;
+  --color-plate: #d7cab0;
+  --color-plate-deep: #c4b492;
+  --color-wood: #6a4e31;
+
+  --font-sans: var(--font-instrument-sans), system-ui, sans-serif;
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ---- semantic tokens -------------------------------------- */
+:root {
+  /* surfaces */
+  --surface-paper: #f2ede1;
+  --surface-raised: #faf6ec;
+  --surface-sunk: #ece6d8;
+
+  /* type */
+  --text-primary: #1d1a14;
+  --text-secondary: #564e3f;
+  --text-muted: #6b6350;
+
+  /* rules */
+  --rule-hairline: #d5cab4;
+  --rule-strong: #b4a78b;
+
+  /* the one accent. Vermilion, the mark a grader leaves on a page. */
+  --accent-ink: #b32c16;
+  --accent-bright: #d4451f;
+  --accent-wash: rgba(179, 44, 22, 0.06);
+
+  /* the specimen plate: a mid-tone, so a studio-white photo
+     multiplied onto it disappears into the plate */
+  --plate: #d7cab0;
+  --plate-deep: #c4b492;
+
+  /* the wood, kept as a material memory of the shelf */
+  --wood: #6a4e31;
+
+  /* type scale. Three sizes plus labels, committed. */
+  --type-display: clamp(2.25rem, 4vw, 3.5rem);
+  --type-title: clamp(1.6rem, 2.6vw, 2.25rem);
+  --type-lede: 1.0625rem;
+  --type-body: 1rem;
+  --type-label: 0.6875rem;
+
+  --measure: 34rem;
+  --page-max: 68rem;
+
+  /* motion. One entrance, eased out, never bouncy. */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --dur-rise: 520ms;
+}
+
+/* ---- base -------------------------------------------------- */
+@layer base {
+  html {
+    height: 100%;
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html,
+  body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  body {
+    min-height: 100%;
+    color: var(--text-primary);
+    background: var(--surface-paper);
+    font-family: var(--font-instrument-sans), system-ui, sans-serif;
+    font-size: var(--type-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Paper grain. A low-opacity turbulence tile, so the page reads as
+     stock rather than as a flat fill. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img {
+    display: block;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.12;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  ul,
+  ol {
+    margin: 0;
+    padding: 0;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+  }
+
+  /* Every text field is a ruled line, not a rounded box. The masthead
+     search, the sign-in form and the search page all read as one system. */
+  input:not([type="radio"]):not([type="checkbox"]):not([type="submit"]):not([type="hidden"]),
+  select,
+  textarea {
+    width: 100%;
+    padding: 0.2rem 0.1rem;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.3;
+    color: var(--text-primary);
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--rule-strong);
+    border-radius: 0;
+    transition: border-color 160ms var(--ease-out);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-bottom-color: var(--accent-ink);
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 3px;
+  }
+
+  /* One focus treatment for the whole site. Visible, and the accent
+     colour, so keyboard users see the same signal click users get. */
+  :focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+
+  ::selection {
+    background: var(--accent-wash);
+    color: var(--text-primary);
   }
 }
 
-html {
-  height: 100%;
-}
+/* ---- components -------------------------------------------- */
+@layer components {
+  /* ============ the page frame ============ */
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+  .page {
+    max-width: var(--page-max);
+    margin: 0 auto;
+    padding: 0 1.5rem 6rem;
+  }
 
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  .page-narrow {
+    max-width: 48rem;
+  }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
+  @media (min-width: 768px) {
+    .page {
+      padding: 0 2.5rem 8rem;
+    }
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  /* Section spacing is large. Element spacing is small. That contrast
+     is what makes a page look built rather than stacked. */
+  .section {
+    margin-top: 7rem;
+  }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+  @media (min-width: 768px) {
+    .section {
+      margin-top: 9rem;
+    }
+  }
+
+  /* ============ masthead ============ */
+
+  .masthead {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 1.15rem 1.5rem 0.9rem;
+    background: var(--surface-paper);
+  }
+
+  @media (min-width: 768px) {
+    .masthead {
+      padding: 1.35rem 2.5rem 1rem;
+    }
+  }
+
+  /* the wood edge: the one piece of the old collection wall that survives,
+     reduced to a crisp rule under the masthead */
+  .masthead::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    background: var(--wood);
+  }
+
+  .masthead .logo {
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .masthead nav {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .masthead nav a {
+    font-size: 0.8125rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding-bottom: 2px;
+    border-bottom: 1px solid transparent;
+    transition: color 140ms var(--ease-out), border-color 140ms var(--ease-out);
+  }
+
+  .masthead nav a:hover {
+    color: var(--text-primary);
+    border-bottom-color: var(--rule-strong);
+  }
+
+  .masthead nav a[aria-current="page"] {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent-ink);
+  }
+
+  .masthead nav a.nav-cta {
+    padding: 0.45rem 0.9rem;
+    color: var(--surface-paper);
+    background: var(--text-primary);
+    border-bottom-color: transparent;
+  }
+
+  .masthead nav a.nav-cta:hover {
+    background: var(--accent-ink);
+    color: var(--surface-paper);
+  }
+
+  /* The search field is a ruled line, not a rounded box. */
+  .masthead-search {
+    flex: 1;
+    max-width: 26rem;
+    margin-left: auto;
+  }
+
+  .masthead-search input {
+    width: 100%;
+    padding: 0.4rem 0.1rem;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--rule-strong);
+    border-radius: 0;
+    transition: border-color 160ms var(--ease-out);
+  }
+
+  .masthead-search input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .masthead-search input:focus {
+    outline: none;
+    border-bottom-color: var(--accent-ink);
+  }
+
+  .masthead-search input:focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 4px;
+  }
+
+  @media (max-width: 720px) {
+    .masthead {
+      flex-wrap: wrap;
+      gap: 0.75rem 1rem;
+    }
+    .masthead-search {
+      order: 3;
+      flex-basis: 100%;
+      max-width: none;
+      margin-left: 0;
+    }
+    .masthead nav {
+      gap: 1rem;
+    }
+  }
+
+  /* ============ type roles ============ */
+
+  .display {
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-size: var(--type-display);
+    font-weight: 500;
+    line-height: 1.03;
+    letter-spacing: -0.03em;
+    line-height: 1.04;
+  }
+
+  .title {
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-size: var(--type-title);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .page-title {
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-size: var(--type-title);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+
+  /* A shelf row: a small specimen of the bottle next to what you paid for
+     it. Not a card, not a box. */
+  .shelf-row {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    gap: 1.1rem;
+    align-items: start;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--rule-hairline);
+  }
+
+  .shelf-row .census-thumb {
+    width: 3.25rem;
+    aspect-ratio: 3 / 4;
+    background: var(--plate);
+    border: 1px solid var(--rule-strong);
+    overflow: hidden;
+  }
+
+  .shelf-row .census-thumb img {
+    mix-blend-mode: multiply;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .lede {
+    font-size: var(--type-lede);
+    line-height: 1.62;
+    color: var(--text-secondary);
+    max-width: var(--measure);
+  }
+
+  .label {
+    font-size: var(--type-label);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .kicker {
+    composes: label;
+  }
+
+  .muted {
+    color: var(--text-muted);
+  }
+
+  .sub {
+    color: var(--text-secondary);
+  }
+
+  .fine {
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  /* Figures line up in a column, so a ledger reads as a ledger. */
+  .figure {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .textlink {
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+
+  .textlink:hover {
+    color: var(--accent-bright);
+  }
+
+  /* ============ blocks and rules ============ */
+
+  /* An editorial block: a heavy top rule and a paper fill. Not a
+     floating box with a shadow. */
+  .card {
+    background: var(--surface-raised);
+    border-top: 2px solid var(--text-primary);
+    padding: 1.5rem 1.75rem;
+  }
+
+  .rule-top {
+    border-top: 1px solid var(--rule-hairline);
+    padding-top: 1rem;
+  }
+
+  .rule-heavy {
+    border-top: 2px solid var(--text-primary);
+    padding-top: 1.25rem;
+  }
+
+  .rows > li {
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--rule-hairline);
+  }
+
+  .rows > li:last-child {
+    border-bottom: 0;
+  }
+
+  /* ============ buttons ============ */
+
+  .cta,
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.25rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out),
+      border-color 150ms var(--ease-out);
+  }
+
+  .cta,
+  .btn {
+    background: var(--accent-ink);
+    color: #fdfaf3;
+  }
+
+  .cta:hover,
+  .btn:hover {
+    background: var(--accent-bright);
+  }
+
+  .btn.secondary,
+  .cta.secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border-color: var(--rule-strong);
+  }
+
+  .btn.secondary:hover,
+  .cta.secondary:hover {
+    background: var(--surface-raised);
+    border-color: var(--text-primary);
+  }
+
+  .quiet {
+    /* A complete button, not a colour. Tailwind's preflight resets every
+       element to `border: 0 solid; padding: 0`, so a class that only sets
+       border-color renders as bare text. */
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    font-family: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--rule-hairline);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out),
+      border-color 150ms var(--ease-out);
+  }
+
+  .quiet:hover {
+    color: var(--text-primary);
+    border-color: var(--rule-strong);
+    background: var(--surface-raised);
+  }
+
+  .solid {
+    background: var(--text-primary);
+    color: var(--surface-paper);
+  }
+
+  .solid:hover {
+    background: var(--accent-ink);
+  }
+
+  button:disabled,
+  .btn:disabled,
+  .cta:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* ============ the feed ============
+     The signed-in home. A pick is a bottle, a reason, and four buttons. */
+
+  .feed-list {
+    list-style: none;
+    padding: 0;
+    margin: 2.5rem 0 0;
+    border-top: 2px solid var(--text-primary);
+  }
+
+  .feed-row {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr);
+    gap: 1.25rem;
+    padding: 1.35rem 0;
+    border-bottom: 1px solid var(--rule-hairline);
+  }
+
+  .feed-plate {
+    width: 5rem;
+    aspect-ratio: 3 / 4;
+    background: var(--plate);
+    border: 1px solid var(--rule-strong);
+    overflow: hidden;
+  }
+
+  .feed-plate img {
+    mix-blend-mode: multiply;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* the no-photo ghost bottle. Same box rules as the img above so a 404-ing
+     thumbnail swaps to a clean silhouette instead of raw alt text. */
+  .feed-plate .thumb-fallback,
+  .plate-figure .thumb-fallback,
+  .specimen-plate .thumb-fallback {
+    display: grid;
+    place-items: end center;
+    width: 100%;
+    height: 100%;
+    color: var(--text-muted);
+    padding: 12% 14%;
+    mix-blend-mode: multiply;
+  }
+
+  .feed-plate .thumb-fallback svg,
+  .plate-figure .thumb-fallback svg,
+  .specimen-plate .thumb-fallback svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .feed-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .feed-name {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .feed-name:hover {
+    color: var(--accent-ink);
+  }
+
+  .feed-house {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .feed-reason {
+    margin-top: 0.4rem;
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-size: 1.125rem;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    max-width: 40rem;
+  }
+
+  .feed-notes {
+    margin-top: 0.35rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .feed-votes {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
+  }
+
+  @media (max-width: 560px) {
+    .feed-row {
+      grid-template-columns: 3.5rem minmax(0, 1fr);
+      gap: 0.9rem;
+    }
+    .feed-plate {
+      width: 3.5rem;
+    }
+    .feed-reason {
+      font-size: 1rem;
+    }
+  }
+
+
+  /* ============ the index ============
+     A browse page is a printed index: a name on the left, a figure on the
+     right, a hairline between entries. */
+
+  .index-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 2px solid var(--text-primary);
+  }
+
+  /* A section that already carries a heavy rule does not need a second one
+     right under its own label. */
+  .rule-heavy .index-list {
+    border-top: 0;
+  }
+
+  .index-list > li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--rule-hairline);
+  }
+
+  .index-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem 1.25rem;
+    align-items: baseline;
+  }
+
+  .index-name {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .index-name:hover {
+    color: var(--accent-ink);
+    text-decoration: underline;
+  }
+
+  .index-figure {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .index-figure b {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  .page-head {
+    padding-top: 3.25rem;
+  }
+
+  .page-head .page-title {
+    margin-top: 0.7rem;
+  }
+
+  .page-head .lede {
+    margin-top: 1rem;
+  }
+
+  .index-nav {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    margin-top: 2rem;
+    font-size: 0.875rem;
+  }
+
+  .index-nav a {
+    color: var(--accent-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ============ the plate grid ============
+     Search results are a gallery of specimen plates. A bottle you can see
+     is a bottle you can find, which is the whole point of a catalogue of
+     things you recognise by sight rather than by name. */
+
+  .plate-grid {
+    list-style: none;
+    padding: 0;
+    margin: 1.25rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
+    gap: 1.75rem 1.25rem;
+    border-top: 2px solid var(--text-primary);
+    padding-top: 1.5rem;
+  }
+
+  .plate-card {
+    display: block;
+  }
+
+  .plate-figure {
+    display: block;
+    position: relative;
+    background: var(--plate);
+    border: 1px solid var(--rule-strong);
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+  }
+
+  .plate-figure img {
+    mix-blend-mode: multiply;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .plate-name {
+    display: block;
+    margin-top: 0.55rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .plate-card:hover .plate-name {
+    color: var(--accent-ink);
+  }
+
+  .plate-house {
+    display: block;
+    margin-top: 0.1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .plate-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
+  .plate-clones {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .plate-kind {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ============ the families row ============
+     The index explains itself by smell before it explains itself by
+     attention: chips in, one per family, and the count says whether the
+     page is worth opening. */
+
+  .families-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 1.1rem;
+  }
+
+  .families-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45rem;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    background: var(--surface-raised);
+    border: 1px solid var(--rule-hairline);
+    border-radius: 2px;
+    transition: border-color 140ms var(--ease-out), color 140ms var(--ease-out);
+  }
+
+  .families-chip:hover {
+    border-color: var(--accent-ink);
+    color: var(--accent-ink);
+  }
+
+  .families-chip-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* the sign-out control reads as a nav link, not a button */
+  .masthead nav .nav-plain {
+    font-family: inherit;
+    font-size: 0.8125rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 0 0 2px;
+    margin: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    border-bottom: 1px solid transparent;
+    cursor: pointer;
+    transition: color 140ms var(--ease-out), border-color 140ms var(--ease-out);
+  }
+
+  .masthead nav .nav-plain:hover {
+    color: var(--text-primary);
+    border-bottom-color: var(--rule-strong);
+  }
+
+  /* ============ forms ============
+     A form is a printed questionnaire: ruled rows, a real legend, and
+     chips you can toggle. The native control stays, it just gets the
+     accent colour and enough room to breathe. */
+
+  .form-group {
+    border: 0;
+    padding: 0;
+    margin: 2.5rem 0 0;
+  }
+
+  .rule-heavy .form-group:first-of-type,
+  .rule-heavy .form-group:first-child {
+    margin-top: 1.6rem;
+  }
+
+  .form-legend {
+    display: block;
+    padding: 0;
+    margin-bottom: 0.9rem;
+    font-size: var(--type-label);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .form-legend .hint {
+    display: block;
+    margin-top: 0.4rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  .form-options {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid var(--rule-hairline);
+  }
+
+  .form-option {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0.2rem 0.7rem 0;
+    border-bottom: 1px solid var(--rule-hairline);
+    cursor: pointer;
+    transition: background-color 140ms var(--ease-out);
+  }
+
+  .form-option:hover {
+    background: var(--surface-raised);
+  }
+
+  .form-option input[type="radio"],
+  .form-option input[type="checkbox"] {
+    width: 1.05rem;
+    height: 1.05rem;
+    margin: 0;
+    flex-shrink: 0;
+    accent-color: var(--accent-ink);
+    cursor: pointer;
+  }
+
+  .form-option-text {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  /* a chip you can toggle. The input is still a real checkbox, it just
+     hides behind the label and the label shows the state. */
+  .form-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .form-chip {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .form-chip input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+  }
+
+  .form-chip span {
+    display: inline-block;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    background: var(--surface-raised);
+    border: 1px solid var(--rule-hairline);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: color 140ms var(--ease-out), border-color 140ms var(--ease-out),
+      background-color 140ms var(--ease-out);
+  }
+
+  .form-chip input:checked + span {
+    color: var(--accent-ink);
+    border-color: var(--accent-ink);
+    background: var(--accent-wash);
+  }
+
+  .form-chip input:focus-visible + span {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 2px;
+  }
+
+  .form-chip span:hover {
+    border-color: var(--rule-strong);
+  }
+
+  .form-chip input:checked + span:hover {
+    border-color: var(--accent-ink);
+  }
+
+  .form-error {
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    border-left: 2px solid var(--accent-ink);
+    background: var(--accent-wash);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+  }
+
+  /* a text field with a label above it, the way a form should read */
+  .form-field {
+    display: block;
+    margin-top: 1.4rem;
+  }
+
+  .form-field-label {
+    display: block;
+    font-size: var(--type-label);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  /* ============ naming a bottle ============
+     Setup asks for a bottle, so the field suggests while you type and the
+     chosen bottle reads as a ruled entry, like everything else. */
+
+  .bottle-search {
+    margin-top: 0.9rem;
+  }
+
+  .bottle-hits {
+    list-style: none;
+    margin: 0.6rem 0 0;
+    padding: 0;
+    border-top: 1px solid var(--rule-hairline);
+  }
+
+  .bottle-hit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    width: 100%;
+    padding: 0.55rem 0.1rem;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--rule-hairline);
+    border-radius: 0;
+    cursor: pointer;
+    transition: background-color 140ms var(--ease-out);
+  }
+
+  .bottle-hit:hover {
+    background: var(--surface-raised);
+  }
+
+  .bottle-hit-name {
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+  }
+
+  .bottle-hit-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .bottle-picked {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.9rem;
+    margin-top: 0.9rem;
+    padding: 0.7rem 0;
+    border-top: 1px solid var(--rule-hairline);
+    border-bottom: 1px solid var(--rule-hairline);
+  }
+
+  .bottle-picked-name {
+    font-size: 1.0625rem;
+    color: var(--text-primary);
+  }
+
+  .bottle-picked-meta {
+    margin-left: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  /* ============ the specimen plate ============
+     A catalogue photo is shot on white. Laid on a mid-tone plate and
+     multiplied, the white becomes the plate, and the bottle sits in
+     the paper instead of floating on it. */
+
+  .specimen {
+    display: block;
+    background: var(--plate);
+    border: 1px solid var(--rule-strong);
+    overflow: hidden;
+  }
+
+  .specimen img {
+    mix-blend-mode: multiply;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .specimen-lite {
+    background: var(--plate);
+    border: 1px solid var(--rule-strong);
+  }
+
+  /* The family strip on a product page. Bottles stand on a baseline,
+     the way they stand on a shelf. */
+  .specimen-strip {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 0;
+    border-bottom: 2px solid var(--text-primary);
+    scrollbar-width: thin;
+  }
+
+  .specimen-cell {
+    flex: 0 0 auto;
+    width: 7.75rem;
+    padding: 0.75rem 0.85rem 0.9rem;
+    border-right: 1px solid var(--rule-hairline);
+    color: var(--text-primary);
+    transition: background-color 160ms var(--ease-out);
+  }
+
+  .specimen-cell:first-child {
+    border-left: 1px solid var(--rule-hairline);
+  }
+
+  .specimen-cell:hover {
+    background: var(--surface-raised);
+  }
+
+  .specimen-cell.is-this {
+    box-shadow: inset 0 -3px 0 var(--accent-ink);
+  }
+
+  .specimen-cell.is-this .specimen-name {
+    color: var(--accent-ink);
+  }
+
+  .specimen-plate {
+    /* a block, always. An inline span ignores width and aspect-ratio, and
+       the plate background then paints as a sliver beside the photo instead
+       of under it, which is exactly how a bottle ends up floating on white. */
+    display: block;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    margin-bottom: 0.6rem;
+    background: var(--plate);
+    border: 1px solid var(--rule-strong);
+    overflow: hidden;
+  }
+
+  .specimen-plate img {
+    mix-blend-mode: multiply;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .specimen-name {
+    display: block;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    font-weight: 500;
+    /* two lines of room for every name, so the numbers below line up */
+    min-height: 2.6em;
+  }
+
+  .specimen-meta {
+    display: block;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+  }
+
+  .specimen-meta .close {
+    color: var(--accent-ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* a house name is one line, always, so the numbers stay aligned */
+  .specimen-house {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* A run of house links, set like a line of type rather than a grid of
+     cards. */
+  .house-run {
+    list-style: none;
+    padding: 0;
+    margin: 1.1rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--rule-hairline);
+  }
+
+  .house-run li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.7rem 1.25rem 0.7rem 0;
+    margin-right: 1.25rem;
+    border-right: 1px solid var(--rule-hairline);
+  }
+
+  .house-run li:last-child {
+    border-right: 0;
+  }
+
+  .house-run-name {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .house-run-name:hover {
+    color: var(--accent-ink);
+  }
+
+  .house-run-count {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+
+  /* ============ the ledger ============
+     The census is a table of measurements, so it is set as a table:
+     hairline rules, tabular figures, no boxes. */
+
+  .census-rows {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 2px solid var(--text-primary);
+  }
+
+  .census-row {
+    display: grid;
+    grid-template-columns: 3.1rem minmax(0, 1fr) auto 3.75rem;
+    align-items: center;
+    gap: 0.35rem 1.25rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--rule-hairline);
+  }
+
+  .census-row .census-thumb {
+    display: grid;
+    place-items: center;
+    width: 3.1rem;
+    height: 4rem;
+    overflow: hidden;
+    align-self: center;
+  }
+
+  .census-row .census-thumb img,
+  .census-row .census-thumb .thumb-fallback {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    mix-blend-mode: multiply;
+  }
+
+  .census-row .census-thumb .thumb-fallback {
+    display: grid;
+    place-items: end center;
+    color: var(--text-muted);
+    padding: 0.4rem 0.55rem;
+  }
+
+  .census-row .census-thumb .thumb-fallback svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  @media (max-width: 640px) {
+    .census-row {
+      grid-template-columns: 2.6rem minmax(0, 1fr) auto;
+    }
+    .census-row .census-thumb {
+      width: 2.6rem;
+      height: 3.4rem;
+    }
+    .census-row .detail-toggle {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .census-row .name {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .census-row .name:hover {
+    color: var(--accent-ink);
+  }
+
+  .census-row .house {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+  }
+
+  .census-row .measure {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .census-row .close {
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+
+  .census-row .votes {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+  }
+
+  .census-row .price {
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+  }
+
+  .census-row .detail-toggle {
+    justify-self: end;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .census-row .detail-toggle:hover {
+    color: var(--accent-ink);
+  }
+
+  .census-row .detail {
+    grid-column: 1 / -1;
+    margin-top: 0.15rem;
+    font-size: 0.75rem;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  .tag {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .tag.accent {
+    color: var(--accent-ink);
+  }
+
+  /* ============ the meter ============ */
+
+  .meter {
+    border-top: 2px solid var(--text-primary);
+    padding-top: 1.25rem;
+  }
+
+  .meter-score {
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-size: 3.25rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--accent-ink);
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .meter-score small {
+    font-family: var(--font-instrument-sans), system-ui, sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--text-muted);
+  }
+
+  .meter-track {
+    position: relative;
+    height: 10px;
+    margin-top: 1.1rem;
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule-hairline);
+  }
+
+  .meter-fill {
+    position: absolute;
+    right: 0;
+    height: 100%;
+    background: var(--accent-ink);
+  }
+
+  .meter-marker {
+    position: absolute;
+    top: -5px;
+    width: 2px;
+    height: 18px;
+    background: var(--text-primary);
+  }
+
+  .meter-labels {
+    position: relative;
+    height: 1.1rem;
+    margin-top: 0.5rem;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* each label sits exactly where its bucket's score lands on the track,
+     so the marker always stops on a label instead of floating between
+     evenly spaced ones. */
+  .meter-labels span {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+  }
+
+  .meter-labels span:first-child {
+    transform: none;
+  }
+
+  .meter-labels span:last-child {
+    transform: translateX(-100%);
+  }
+
+  /* on a narrow track the truthful spacing crowds SPOT ON against CLOSE,
+     so CLOSE drops out and the marker at 20% simply has no name below. */
+  @media (max-width: 480px) {
+    .meter-labels span:nth-child(2) {
+      display: none;
+    }
+  }
+
+  .meter-dist {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+    align-items: end;
+    height: 5.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .meter-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    height: 100%;
+  }
+
+  .meter-col-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 0.25rem;
+  }
+
+  .meter-col-bar {
+    width: 100%;
+    background: var(--rule-strong);
+  }
+
+  .meter-col-common .meter-col-bar {
+    background: var(--accent-ink);
+  }
+
+  .meter-question {
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    max-width: 26ch;
+  }
+
+  /* ============ the data band ============
+     Three figures, ruled like a table of contents. */
+
+  .data-band {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 2px solid var(--text-primary);
+    border-bottom: 1px solid var(--rule-hairline);
+  }
+
+  .data-band > div {
+    padding: 1.6rem 1.25rem 1.7rem 0;
+    border-right: 1px solid var(--rule-hairline);
+  }
+
+  .data-band > div + div {
+    padding-left: 1.25rem;
+  }
+
+  .data-band > div:last-child {
+    border-right: 0;
+  }
+
+  .data-figure {
+    font-family: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+    font-size: clamp(1.9rem, 3.2vw, 2.75rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .data-caption {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .data-band {
+      grid-template-columns: 1fr;
+    }
+    .data-band > div {
+      border-right: 0;
+      border-bottom: 1px solid var(--rule-hairline);
+      padding: 1.1rem 0;
+    }
+    .data-band > div + div {
+      padding-left: 0;
+    }
+    .data-band > div:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  /* ============ the hero ============ */
+
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    gap: 3rem 4rem;
+    align-items: center;
+    padding: 5rem 0 4rem;
+  }
+
+  @media (max-width: 900px) {
+    .hero {
+      /* minmax(0, 1fr), never a bare 1fr. A bare 1fr is minmax(auto, 1fr),
+         so the column cannot shrink below the min-content width of its
+         items, and the hero plate's specimen strip pushes the whole page
+         wider than the phone. */
+      grid-template-columns: minmax(0, 1fr);
+      gap: 3rem;
+      padding: 3.25rem 0 3rem;
+    }
+    .hero > * {
+      min-width: 0;
+    }
+  }
+
+  .hero-plate {
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule-hairline);
+    padding: 1.5rem;
+  }
+
+  .hero-plate .caption {
+    display: block;
+    margin-top: 0.9rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--rule-hairline);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* ============ ad slots ============
+     A sponsored block must not look like an editorial block. */
+
+  .ad {
+    border: 1px solid var(--rule-hairline);
+    background: var(--surface-sunk);
+    padding: 1.25rem 1.4rem;
+  }
+
+  .ad .ad-label {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ============ empty and loading states ============ */
+
+  .empty {
+    border-top: 2px solid var(--text-primary);
+    border-bottom: 1px solid var(--rule-hairline);
+    padding: 2.25rem 0;
+    max-width: 40rem;
+  }
+
+  .empty .title {
+    margin-bottom: 0.6rem;
+  }
+
+  .rule-heavy .label + .empty {
+    border-top: 0;
+  }
+
+  .loading {
+    border-top: 2px solid var(--text-primary);
+    padding: 1.25rem 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  /* ============ ghost bottle ============ */
+
+  .ghost-bottle {
+    display: inline-flex;
+    align-items: flex-end;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--rule-strong);
+  }
+
+  .ghost-bottle svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ============ the hero entrance ============
+     One orchestrated entrance per page. Everything else stays still. */
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .rise {
+    animation: rise var(--dur-rise) var(--ease-out) both;
+  }
+
+  .rise-1 {
+    animation-delay: 60ms;
+  }
+  .rise-2 {
+    animation-delay: 120ms;
+  }
+  .rise-3 {
+    animation-delay: 180ms;
+  }
+  .rise-4 {
+    animation-delay: 240ms;
+  }
+  .rise-5 {
+    animation-delay: 300ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise,
+    .rise-1,
+    .rise-2,
+    .rise-3,
+    .rise-4,
+    .rise-5 {
+      animation: none;
+    }
+    * {
+      transition-duration: 1ms !important;
+    }
+  }
+
+  /* ============ misc ============ */
+
+  .chip {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--rule-hairline);
+    border-radius: 2px;
+    background: var(--surface-raised);
+    transition: color 140ms var(--ease-out), border-color 140ms var(--ease-out);
+  }
+
+  a.chip:hover {
+    color: var(--text-primary);
+    border-color: var(--text-primary);
+  }
+
+  .proof-line {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  .proof-line strong {
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .seeded {
+    border-left: 2px solid var(--rule-strong);
+    padding-left: 1rem;
+  }
+
+  .seeded-bar {
+    height: 6px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule-hairline);
+  }
+
+  .seeded-bar > div {
+    height: 100%;
+    background: var(--rule-strong);
+  }
+
+  .seeded-tag {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--text-muted);
   }
 }

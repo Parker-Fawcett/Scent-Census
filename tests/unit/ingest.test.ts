@@ -12,7 +12,7 @@ import {
   toMappedCatalogFragrance,
 } from "../../src/ingest/fragdb";
 import type { FragDBCatalog, FragDBInputs, MappedCatalogFragrance } from "../../src/ingest/fragdb";
-import { searchCatalog } from "@/domain/catalogSearch";
+import { rankCandidates, type CandidateRow } from "@/server/catalogueSearch";
 
 const samplesDir = join(__dirname, "../fixtures/fragdb-samples");
 const read = (name: string) => readFileSync(join(samplesDir, name), "utf8");
@@ -193,8 +193,19 @@ describe("toMappedCatalogFragrance", () => {
       slug: "dolce-gabbana",
       tier: "DESIGNER",
     });
-    const hits = searchCatalog([catalogFragrance], "light blue");
+    const candidate: CandidateRow = {
+      id: catalogFragrance.id,
+      name: catalogFragrance.name,
+      slug: catalogFragrance.slug,
+      year: catalogFragrance.year,
+      catalogueSourcePid: null,
+      houseId: catalogFragrance.house.id,
+      houseName: catalogFragrance.house.name,
+      houseSlug: catalogFragrance.house.slug,
+      cloneCount: 0,
+    };
+    const hits = rankCandidates([candidate], [catalogFragrance.house], "light blue");
     expect(hits).toHaveLength(1);
-    expect(hits[0].fragrance.id).toBe("485");
+    expect(hits[0].id).toBe("485");
   });
 });

@@ -9,13 +9,13 @@
 // variants ("PARIS CORNER" / "Paris Corner") collapse, and community accord /
 // note data persists verbatim with honest "unknown" note families.
 
-import { searchCatalog, type CatalogHit } from "@/domain/catalogSearch";
 import type { MappedCatalogFragrance } from "@/ingest/fragdb";
 import type {
   DumpPyramidNote,
   MappedDumpFragrance,
 } from "@/ingest/fragranticaDump";
 import type { PrismaInstance } from "@/lib/prisma";
+import { filterAccords } from "@/domain/prominence";
 
 export async function importCatalogRecords(
   prisma: PrismaInstance,
@@ -90,6 +90,21 @@ export interface ImportedDumpSummary {
  * and set queries per chunk stay inside the same upsert-by-pid semantics:
  * already-loaded rows are skipped, never duplicated.
  */
+/**
+ * The accord tags worth listing for a scent, strongest first.
+ *
+ * Accords are the scent's family summary, not a note pyramid. The corpus
+ * caps them at eight and every one is a family the community voted for, so
+ * the filter keeps the list whole and drops only zero-strength rows. The
+ * old 35% floor deleted seven of Imagination's eight families and left it
+ * looking like a citrus-only scent.
+ */
+export function filterAccordsByProminence(
+  accords: Array<{ name: string; strength: number }>,
+): string[] {
+  return filterAccords(accords);
+}
+
 export async function importDumpRecords(
   prisma: PrismaInstance,
   records: MappedDumpFragrance[],
@@ -205,9 +220,16 @@ export async function importDumpRecords(
       houseId,
       year: r.year,
       perfumer: r.perfumers[0] ?? null, // lead perfumer; the corpus order is the source order
-      accords: [...r.accords]
-        .sort((a, b) => b.strength - a.strength)
-        .map((a) => a.name),
+      // Only the accords that actually describe the scent. The corpus
+      // stores up to eight accord tags with a prominence score, and the
+      // tail is the community tagging once rather than the scent being
+      // that way. Without a floor, Tuscan Leather came out as a "sweet"
+      // scent because someone tagged it sweet at 26 out of 100 while
+      // leather sat at 100.
+      //
+      // The floor is relative: an accord has to be at least this much of
+      // the strongest accord on the same scent to be listed.
+      accords: filterAccordsByProminence(r.accords),
       // note names sorted by pyramid weight, strongest first; corpus notes
       // are untiered mostly, so weight is the only honest ordering signal
       noteNames: r.pyramid
@@ -346,41 +368,3 @@ export async function loadDumpByPids(
   }));
 }
 
-export async function searchCatalogInDb(
-  prisma: PrismaInstance,
-  query: string,
-): Promise<CatalogHit[]> {
-  // At corpus scale the catalog is tens of thousands of rows, so the SQL
-  // layer narrows candidates first (name or house matches any word); the
-  // M1 domain ranking then orders the narrowed set exactly as before.
-  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean).slice(0, 5);
-  // every word must appear somewhere (name or house name); Postgres contains
-  // is case-sensitive by default, so the insensitive mode preserves the
-  // domain layer's own case handling
-  const rows = await prisma.fragrance.findMany({
-    where:
-      words.length === 0
-        ? undefined
-        : {
-            AND: words.map((w) => ({
-              OR: [
-                { name: { contains: w, mode: "insensitive" as const } },
-                { house: { name: { contains: w, mode: "insensitive" as const } } },
-              ],
-            })),
-          },
-    include: { house: true },
-    take: 500,
-  });
-  const catalogRecords = rows.map((row) => ({
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    house: { id: row.house.id, name: row.house.name, slug: row.house.slug, tier: row.house.tier },
-    year: row.year,
-    inspiredById: row.inspiredById,
-    noteNames: row.noteNames,
-    accordNames: row.accords,
-  }));
-  return searchCatalog(catalogRecords, query);
-}

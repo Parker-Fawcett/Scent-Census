@@ -24,5 +24,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     await recomputePairRollup(prisma, pair.cloneId, pair.targetId);
     recomputed += 1;
   }
-  return NextResponse.json({ recomputed });
+  // zero-vote rows left behind before clears deleted them; they carry no
+  // measurement and would otherwise shadow the pair's smell-alike counts
+  const { count: emptied } = await prisma.cloneRollup.deleteMany({ where: { sampleSize: 0 } });
+  return NextResponse.json({ recomputed, emptied });
 }

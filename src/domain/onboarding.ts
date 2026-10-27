@@ -1,7 +1,18 @@
-// Onboarding validation (PRD section 7.1): budget band, clone band, 1-3
-// accords. There is no long quiz and no rate-50-fragrances wall; validation
-// lives here so every entry point (server action, API, future app) enforces
-// the same contract, and every field is skippable without freezing state.
+// Onboarding validation.
+//
+// The questions follow what the product actually is now: a census of how
+// close a clone smells to the bottle it copies. So setup asks for four
+// things, in order of how much they sharpen the picks:
+//
+//   1. a bottle you already own (optional, handled by the action: it becomes
+//      a shelf row, and the feed reasons from bottles it can name)
+//   2. the families you reach for, from the census's real accord vocabulary
+//   3. whether you would wear a clone at all
+//   4. what you will pay, which tilts the ranking at the value edge of a pair
+//
+// Validation lives here so every entry point (server action, API, future
+// app) enforces the same contract. Every field is skippable without freezing
+// state.
 
 export const BUDGET_BANDS = ["<50", "50-150", "150-400", "no-ceiling"] as const;
 export type BudgetBand = (typeof BUDGET_BANDS)[number];
@@ -13,16 +24,29 @@ export const CLONE_BANDS = [
 ] as const;
 export type CloneBand = (typeof CLONE_BANDS)[number];
 
-/** Rendered from notes actually present on the shelf, per PRD 7.1; this list
- * is the no-shelf fallback and the accepted vocabulary at validation time. */
+/**
+ * The accord chips shown at setup, taken from the census's own family
+ * vocabulary and ordered by how many catalogued fragrances carry the
+ * accord. The old list was seven hand-picked words, one of which
+ * (gourmand) matched 119 fragrances out of 140,228 while the families
+ * people actually name (citrus, leather, tobacco, vanilla) were missing.
+ *
+ * This list is also the accepted vocabulary at validation time. Keep it in
+ * sync with the accord families the pages are built from.
+ */
 export const FALLBACK_ACCORDS = [
-  "fresh",
-  "sweet",
   "woody",
+  "citrus",
+  "sweet",
+  "powdery",
   "aromatic",
-  "gourmand",
   "amber",
+  "fruity",
+  "warm spicy",
+  "white floral",
+  "fresh spicy",
   "floral",
+  "musky",
 ] as const;
 export type AccordPref = (typeof FALLBACK_ACCORDS)[number];
 

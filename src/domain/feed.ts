@@ -25,6 +25,8 @@ export interface FeedCandidate {
   accordNames: string[];
   noteNames: string[];
   inspiredById: string | null;
+  /** the catalogue photo, so a pick is recognisable by sight */
+  catalogueSourcePid?: string | null;
   estimateCentsLow: number | null;
   estimateCentsHigh: number | null;
   // optional: purely presentational, the algorithm never uses it
@@ -309,9 +311,19 @@ export function reasonFor(
     ),
   );
   if (shelfMatch !== undefined) {
+    // Name the accord they actually share. Without this, five picks in a
+    // row all read "shares the accords you actually own" and the reason
+    // line stops being a reason.
+    const shared = shelfMatch.accordNames.filter((accord) =>
+      candidate.accordNames.map((x) => x.toLowerCase()).includes(accord.toLowerCase()),
+    );
+    // Three at most. A list of five shared accords is a data dump, not a
+    // reason for a bottle.
+    const sharedBit =
+      shared.length > 0 ? ` Both are ${accordListNames(shared.slice(0, 3))}.` : "";
     return {
       slug: "accord:shelf-match",
-      line: `Like ${shelfMatch.name}, which shares the accords you actually own.`,
+      line: `Like ${shelfMatch.name}, which you own.${sharedBit}`,
     };
   }
 

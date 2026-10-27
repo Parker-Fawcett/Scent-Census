@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { addBottleAction } from "./addBottleAction";
-import type { CatalogHit } from "@/domain/catalogSearch";
+import type { CatalogueHit } from "@/server/catalogueSearch";
 
 // Two forms, no client fetch: the GET form searches this same page
 // (server-rendered results), and the POST form holds the picked bottle plus
@@ -13,7 +13,7 @@ export default function AddBottleForm({
   hits,
 }: {
   query: string;
-  hits: CatalogHit[];
+  hits: CatalogueHit[];
 }) {
   const [error, onAdd] = useActionState(
     async (_prev: string | null, formData: FormData) => addBottleAction(formData),
@@ -24,17 +24,18 @@ export default function AddBottleForm({
   return (
     <>
       <form action="/shelf/add" method="GET">
-        <label>
-          Find a fragrance
+        <label className="form-field">
+          <span className="form-field-label">Find a fragrance</span>
           <input
             type="search"
             name="q"
             defaultValue={query}
             placeholder="e.g. sauvage"
-            style={{ width: "100%" }}
           />
         </label>
-        <button type="submit">Search</button>
+        <button type="submit" className="btn" style={{ marginTop: "1.25rem" }}>
+          Search
+        </button>
       </form>
 
       {searching ? (
@@ -49,16 +50,16 @@ export default function AddBottleForm({
             <form action={onAdd}>
               <ul style={{ listStyle: "none", padding: 0 }}>
                 {hits.map((hit) => (
-                  <li key={hit.fragrance.id} style={{ padding: "0.5rem 0" }}>
+                  <li key={hit.id} style={{ padding: "0.5rem 0" }}>
                     <label>
                       <input
                         type="radio"
                         name="fragranceId"
-                        value={hit.fragrance.id}
+                        value={hit.id}
                         required
                       />{" "}
-                      <strong>{hit.fragrance.name}</strong> ({hit.fragrance.house.name}
-                      {hit.fragrance.year !== null ? `, ${hit.fragrance.year}` : ""})
+                      <strong>{hit.name}</strong> ({hit.house}
+                      {hit.year !== null ? `, ${hit.year}` : ""})
                     </label>
                   </li>
                 ))}
@@ -95,12 +96,12 @@ export default function AddBottleForm({
                 <input name="sealed" type="checkbox" /> Still sealed
               </label>
               {error ? <p role="alert">{error}</p> : null}
-              <button type="submit">Add to shelf</button>
+              <button type="submit" className="btn" style={{ marginTop: "0.75rem" }}>Add to shelf</button>
             </form>
           )}
         </>
       ) : (
-        <p>Search the catalogue, pick the bottle, and the shelf does the rest.</p>
+        <p className="sub">Nothing in the catalogue matched that. Try the house name instead.</p>
       )}
     </>
   );

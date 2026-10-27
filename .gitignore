@@ -40,7 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
-data/
+# raw dumps stay local; the curated clone-claim datasets are committed
+/data/*
+!/data/clones/
 
 # local tooling artifacts
 .playwright-cli/

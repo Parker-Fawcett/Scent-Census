@@ -61,11 +61,17 @@ const seedFrag = async (pid: string, name: string): Promise<{ id: string }> => {
   });
 };
 
+// a vote only lands on a pair the census tracks (a curated edge or the
+// clone's canon link), so every voting test tracks its pair first
+const track = async (clone: { id: string }, target: { id: string }) =>
+  prisma.inspiredByEdge.create({ data: { cloneId: clone.id, targetId: target.id } });
+
 describe("saveCloneVote", () => {
   it("stores a vote per user+pair and materializes the rollup in the same call", async () => {
     const user = await userFor("c1");
     const clone = await seedFrag("census-clone-a", "Clone Alpha");
     const target = await seedFrag("census-target-a", "Target Alpha");
+    await track(clone, target);
 
     await saveCloneVote(prisma, user.id, { cloneId: clone.id, targetId: target.id, bucket: "CLOSE" });
 
@@ -85,6 +91,7 @@ describe("saveCloneVote", () => {
     const user = await userFor("c2");
     const clone = await seedFrag("census-clone-b", "Clone Beta");
     const target = await seedFrag("census-target-b", "Target Beta");
+    await track(clone, target);
 
     await saveCloneVote(prisma, user.id, { cloneId: clone.id, targetId: target.id, bucket: "SPOT_ON" });
     await saveCloneVote(prisma, user.id, { cloneId: clone.id, targetId: target.id, bucket: "NOT_CLOSE" });
@@ -116,6 +123,7 @@ describe("rank-level floors (PRD 7.6: two confidence levels)", () => {
   it("9 votes stay unranked, 10 enter low, 25 recover the confident label", async () => {
     const clone = await seedFrag("census-clone-floors", "Floor Walker");
     const target = await seedFrag("census-target-floors", "Floor Target");
+    await track(clone, target);
 
     const seed = async (n: number) => {
       for (let i = 0; i < n; i += 1) {
@@ -153,6 +161,7 @@ describe("clearCloneVoteForUser", () => {
     const b = await userFor("clear-b");
     const clone = await seedFrag("census-clone-clear", "Clear Clone");
     const target = await seedFrag("census-target-clear", "Clear Target");
+    await track(clone, target);
     await saveCloneVote(prisma, a.id, { cloneId: clone.id, targetId: target.id, bucket: "SPOT_ON" });
     await saveCloneVote(prisma, b.id, { cloneId: clone.id, targetId: target.id, bucket: "SPOT_ON" });
     expect((await loadPairRollup(prisma, clone.id, target.id))!.sampleSize).toBe(2);
@@ -166,12 +175,59 @@ describe("clearCloneVoteForUser", () => {
     const user = await userFor("clear-last");
     const clone = await seedFrag("census-clone-last", "Last Clone");
     const target = await seedFrag("census-target-last", "Last Target");
+    await track(clone, target);
     await saveCloneVote(prisma, user.id, { cloneId: clone.id, targetId: target.id, bucket: "CLOSE" });
     await clearCloneVoteForUser(prisma, user.id, clone.id, target.id);
 
-    const rollup = await loadPairRollup(prisma, clone.id, target.id);
-    expect(rollup!.sampleSize).toBe(0);
-    expect(rollup!.rankLevel).toBe("none");
+    expect(await loadPairRollup(prisma, clone.id, target.id)).toBeNull();
+  });
+
+  it("a user with no vote on the pair cannot reset its rollup", async () => {
+    const voter = await userFor("clear-voter");
+    const stranger = await userFor("clear-stranger");
+    const clone = await seedFrag("census-clone-stranger", "Stranger Clone");
+    const target = await seedFrag("census-target-stranger", "Stranger Target");
+    await track(clone, target);
+    await saveCloneVote(prisma, voter.id, { cloneId: clone.id, targetId: target.id, bucket: "CLOSE" });
+
+    expect(await clearCloneVoteForUser(prisma, stranger.id, clone.id, target.id)).toBeNull();
+    expect((await loadPairRollup(prisma, clone.id, target.id))!.sampleSize).toBe(1);
+  });
+});
+
+describe("tracked pairs only", () => {
+  it("refuses a vote on a pair the census does not track", async () => {
+    const user = await userFor("untracked");
+    const clone = await seedFrag("census-clone-untracked", "Untracked Clone");
+    const target = await seedFrag("census-target-untracked", "Untracked Target");
+    await expect(
+      saveCloneVote(prisma, user.id, { cloneId: clone.id, targetId: target.id, bucket: "SPOT_ON" }),
+    ).rejects.toThrow(/not tracked/i);
+    expect(await prisma.cloneRollup.count({ where: { cloneId: clone.id, targetId: target.id } })).toBe(0);
+  });
+
+  it("accepts a vote through the clone's canon inspiredBy link", async () => {
+    const user = await userFor("canon");
+    const clone = await seedFrag("census-clone-canon", "Canon Clone");
+    const target = await seedFrag("census-target-canon", "Canon Target");
+    await prisma.fragrance.update({ where: { id: clone.id }, data: { inspiredById: target.id } });
+    await saveCloneVote(prisma, user.id, { cloneId: clone.id, targetId: target.id, bucket: "CLOSE" });
+    expect((await loadPairRollup(prisma, clone.id, target.id))!.sampleSize).toBe(1);
+  });
+
+  it("one live vote does not replace a pair's larger smell-alike sample", async () => {
+    const user = await userFor("swamp");
+    const clone = await seedFrag("census-clone-swamp", "Swamp Clone");
+    const target = await seedFrag("census-target-swamp", "Swamp Target");
+    await prisma.inspiredByEdge.create({
+      data: { cloneId: clone.id, targetId: target.id, upVotes: 90, downVotes: 10 },
+    });
+    await saveCloneVote(prisma, user.id, { cloneId: clone.id, targetId: target.id, bucket: "NOT_CLOSE" });
+
+    const row = (await loadRankedClones(prisma, target.id)).find((r) => r.cloneId === clone.id)!;
+    expect(row.source).toBe("smell-alike-votes");
+    expect(row.sampleSize).toBe(100);
+    expect(row.score).toBe(90);
   });
 });
 
@@ -239,6 +295,7 @@ describe("loadRankedClones (curated edges)", () => {
       }
     }
     for (const frag of [strong, weak, tiedA, tiedB]) {
+      await prisma.fragrance.update({ where: { id: frag.id }, data: { inspiredById: target.id } });
       await recomputePairRollup(prisma, frag.id, target.id);
     }
     // the unvoted clone's membership comes from curation (its inspiredBy

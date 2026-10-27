@@ -1,0 +1,237 @@
+{
+  "target": {
+    "brand": "Louis Vuitton",
+    "name": "Imagination",
+    "catalogueSourcePid": 67370
+  },
+  "updated": "2026-10-22",
+  "note": "Every claim below was read on the seller's own listing or in a public community thread on the verified date. Notes are copied from the listing, not inferred. Prices are the cheapest entry size the seller actually sells, in the seller's currency, and move.",
+  "claims": [
+    {
+      "productName": "Imaginary",
+      "houseName": "Montagne Parfums",
+      "claimType": "HOUSE_DECLARED",
+      "sourceLabel": "Montagne Parfums product page, \"Inspired by Louis Vuitton Imagination\"",
+      "sourceUrl": "https://www.montagneparfums.com/fragrance/imaginary-inspired-by-louis-vuitton-imagination",
+      "verifiedOn": "2026-10-22",
+      "notes": [
+        "Citron",
+        "Calabrian Bergamot",
+        "Sicilian Orange",
+        "Nigerian Ginger",
+        "Tunisian Neroli",
+        "Ceylon Cinnamon",
+        "Chinese Black Tea",
+        "Ambroxan",
+        "Olibanum",
+        "Guaiac Wood"
+      ],
+      "priceCents": 5000,
+      "sizeMl": 50,
+      "currency": "USD",
+      "textureNote": "Brighter opening than Imagination, but gets close in the dry down"
+    },
+    {
+      "productName": "Reality",
+      "houseName": "ALT. Fragrances",
+      "claimType": "HOUSE_DECLARED",
+      "sourceLabel": "ALT. Fragrances product page, \"Inspired by Imagination\"",
+      "sourceUrl": "https://altfragrances.com/products/reality",
+      "verifiedOn": "2026-10-22",
+      "notes": [
+        "Citron",
+        "Bergamot",
+        "Orange",
+        "Ginger",
+        "Neroli",
+        "Cinnamon",
+        "Ambroxan",
+        "Musk"
+      ],
+      "priceCents": 4900,
+      "sizeMl": 60,
+      "currency": "USD",
+      "textureNote": "More citrus-forward, less soapy refinement than the original"
+    },
+    {
+      "productName": "Visionary",
+      "houseName": "Alexandria Fragrances",
+      "claimType": "HOUSE_DECLARED",
+      "sourceLabel": "Alexandria Fragrances product page, \"Inspired By Imagination LV\"",
+      "sourceUrl": "https://alexandriafragrances.com/products/visionary",
+      "verifiedOn": "2026-10-22",
+      "notes": [
+        "Calabrian Bergamot",
+        "Sicilian Orange",
+        "Tunisian Neroli",
+        "Zesty Ginger",
+        "Spicy Ceylon Cinnamon",
+        "Chinese Black Tea",
+        "Guaiac Wood",
+        "Ambroxan"
+      ],
+      "textureNote": "Similar in smell, heavier on the tea note"
+    },
+    {
+      "productName": "Insight For Men 1642",
+      "houseName": "Perfume Parlour",
+      "claimType": "HOUSE_DECLARED",
+      "sourceLabel": "Perfume Parlour product page, \"Belongs to the olfactory notes family similar to Imagination - Louis Vuitton\"",
+      "sourceUrl": "https://perfume-parlour.com/products/insight-for-men-1642",
+      "verifiedOn": "2026-10-22",
+      "notes": [
+        "Calabrian Bergamot",
+        "Sicilian Orange",
+        "Citron",
+        "Ceylon Cinnamon",
+        "Nigerian Ginger",
+        "Tunisian Neroli",
+        "Olibanum",
+        "Guaiac Wood",
+        "Ambroxan",
+        "Chinese Black Tea"
+      ],
+      "priceCents": 2800,
+      "sizeMl": 50,
+      "currency": "USD",
+      "textureNote": "Identical 10-note pyramid, oil format"
+    },
+    {
+      "productName": "#Imagine",
+      "houseName": "The Dua Brand",
+      "claimType": "HOUSE_DECLARED",
+      "sourceLabel": "The Dua Brand product page, \"Inspiration: Imagination by Louis Vuitton\"",
+      "sourceUrl": "https://theduabrand.com/products/imagine",
+      "verifiedOn": "2026-10-22",
+      "notes": [
+        "Calabrian Bergamot",
+        "Citron",
+        "Sicilian Orange",
+        "Ceylon Cinnamon",
+        "Tunisian Neroli",
+        "Nigerian Ginger",
+        "Chinese Black Tea",
+        "Ambroxan",
+        "Guaiac Wood",
+        "Olibanum"
+      ],
+      "priceCents": 4300,
+      "sizeMl": 34,
+      "currency": "USD",
+      "textureNote": "Faithful reconstruction of the original"
+    },
+    {
+      "productName": "Imagine Lv",
+      "houseName": "OLFx",
+      "claimType": "HOUSE_DECLARED",
+      "sourceLabel": "OLFx product page, \"inspired by Louis Vuitton Imagination\"",
+      "sourceUrl": "https://olfx.io/louis-vuitton-imagination-analogue-olfx-1072-spray",
+      "verifiedOn": "2026-10-22",
+      "notes": [
+        "Bergamot",
+        "Orange",
+        "Ginger",
+        "Black Tea",
+        "Citron",
+        "Neroli",
+        "Cinnamon",
+        "Ambroxan",
+        "Guaiac Wood"
+      ],
+      "priceCents": 3699,
+      "sizeMl": 50,
+      "currency": "USD",
+      "textureNote": null
+    },
+    {
+      "productName": "Karus Blu Spice",
+      "houseName": "Khadlaj Perfumes",
+      "claimType": "COMMUNITY_LIST",
+      "sourceLabel": "Fragrantica club thread, \"Imagination clones\"",
+      "sourceUrl": "https://www.fragrantica.com/board/viewtopic.php?id=340219",
+      "verifiedOn": "2026-10-22",
+      "textureNote": "Overpowering citrus, subtle hints of tea"
+    },
+    {
+      "productName": "Hectic",
+      "houseName": "Bujairami",
+      "claimType": "COMMUNITY_LIST",
+      "sourceLabel": "Fragrantica club thread, \"Imagination clones\"",
+      "sourceUrl": "https://www.fragrantica.com/board/viewtopic.php?id=340219",
+      "verifiedOn": "2026-10-22",
+      "textureNote": "More citrus, less soap, more energy than the original"
+    },
+    {
+      "productName": "Game of Spades Full House",
+      "houseName": "Jo Milano Paris",
+      "claimType": "COMMUNITY_LIST",
+      "sourceLabel": "Fragrantica club thread, \"Imagination clones\"",
+      "sourceUrl": "https://www.fragrantica.com/board/viewtopic.php?id=340219",
+      "verifiedOn": "2026-10-22",
+      "textureNote": "Zero tea note, all soap and sweet"
+    },
+    {
+      "productName": "Heaven",
+      "houseName": "Maison Viegas",
+      "claimType": "COMMUNITY_LIST",
+      "sourceLabel": "Fragrantica club thread, \"Imagination clones\"",
+      "sourceUrl": "https://www.fragrantica.com/board/viewtopic.php?id=340219",
+      "verifiedOn": "2026-10-22",
+      "textureNote": null
+    },
+    {
+      "productName": "Dream On Infinite",
+      "houseName": "Nuancielo",
+      "claimType": "COMMUNITY_LIST",
+      "sourceLabel": "Fragrantica \"reminds me of\" votes on Imagination",
+      "sourceUrl": "https://www.fragrantica.com/perfume/Louis-Vuitton/Imagination-67370.html",
+      "verifiedOn": "2026-10-22",
+      "textureNote": null
+    },
+    {
+      "productName": "Essence de Blanc",
+      "houseName": "French Avenue",
+      "claimType": "COMMUNITY_LIST",
+      "sourceLabel": "Fragrantica club thread, \"Imagination clones\"",
+      "sourceUrl": "https://www.fragrantica.com/board/viewtopic.php?id=340219",
+      "verifiedOn": "2026-10-22",
+      "textureNote": "Layer with aqua Dubai for a perfect clone"
+    },
+    {
+      "productName": "Majzaaj Infused",
+      "houseName": "Zimaya",
+      "claimType": "COMMUNITY_LIST",
+      "sourceLabel": "Fragrantica club thread, \"Imagination clones\"",
+      "sourceUrl": "https://www.fragrantica.com/board/viewtopic.php?id=340219",
+      "verifiedOn": "2026-10-22",
+      "textureNote": null
+    },
+    {
+      "productName": "Imagine",
+      "houseName": "Fragrance World",
+      "claimType": "EDITORIAL",
+      "sourceLabel": "Scento, \"Best LV Imagination Dupes 2026\"",
+      "sourceUrl": "https://www.scento.com/blog/best-louis-vuitton-imagination-dupe-ranked",
+      "verifiedOn": "2026-10-22",
+      "textureNote": null
+    },
+    {
+      "productName": "Imagination",
+      "houseName": "EM5",
+      "claimType": "EDITORIAL",
+      "sourceLabel": "Scento, \"Best LV Imagination Dupes 2026\"",
+      "sourceUrl": "https://www.scento.com/blog/best-louis-vuitton-imagination-dupe-ranked",
+      "verifiedOn": "2026-10-22",
+      "textureNote": null
+    },
+    {
+      "productName": "Journey To Enlightenment",
+      "houseName": "Scentedelic",
+      "claimType": "EDITORIAL",
+      "sourceLabel": "Scento, \"Best LV Imagination Dupes 2026\"",
+      "sourceUrl": "https://www.scento.com/blog/best-louis-vuitton-imagination-dupe-ranked",
+      "verifiedOn": "2026-10-22",
+      "textureNote": null
+    }
+  ]
+}
