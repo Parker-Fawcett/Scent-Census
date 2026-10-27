@@ -1,0 +1,36 @@
+# Applies Prisma migrations to the production Neon database.
+#
+# Runs on every push to main, right after a merge deploys to production.
+# `prisma migrate deploy` is idempotent and skips already-recorded migrations.
+# The direct (non-pooler) endpoint is required, which is why DIRECT_URL is a
+# repository secret: a local run can be impossible from a phone hotspot that
+# black-holes outbound port 5432, while GitHub runners have full egress.
+name: prod-migrate
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: prod-migrate
+  cancel-in-progress: false
+
+jobs:
+  deploy-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+      - run: npx prisma migrate status
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
