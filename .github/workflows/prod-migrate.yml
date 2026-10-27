@@ -26,6 +26,28 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: diagnose
+        run: |
+          echo "--- default resolution"
+          dig +short ep-noisy-frog-b4b00sv3.c-6.us-east-2.aws.neon.tech | head -5
+          echo "--- via 1.1.1.1"
+          dig +short @1.1.1.1 ep-noisy-frog-b4b00sv3.c-6.us-east-2.aws.neon.tech | head -5
+          echo "--- tcp probe"
+          node -e '
+            const net = require("net");
+            for (const target of [
+              ["ep-noisy-frog-b4b00sv3.c-6.us-east-2.aws.neon.tech", 5432],
+            ]) {
+              const s = net.connect({ host: target[0], port: target[1] }, () => {
+                console.log("connected", target.join(":"));
+                const f = Buffer.from([0x00,0x00,0x08,0x04,0xd2,0x16,0x2f,0xa9]);
+                s.write(f);
+              });
+              s.on("data", d => { console.log("reply bytes:", d.length, JSON.stringify(d.slice(0,3))); });
+              s.on("error", e => console.log("error:", e.code, e.message));
+              s.on("close", () => console.log("closed"));
+            }
+          '
       - run: npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
