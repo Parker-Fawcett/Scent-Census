@@ -28,25 +28,32 @@ jobs:
       - run: npm ci
       - name: diagnose
         run: |
-          echo "--- default resolution"
-          dig +short ep-noisy-frog-b4b00sv3.c-6.us-east-2.aws.neon.tech | head -5
-          echo "--- via 1.1.1.1"
-          dig +short @1.1.1.1 ep-noisy-frog-b4b00sv3.c-6.us-east-2.aws.neon.tech | head -5
-          echo "--- tcp probe"
+          echo "--- pooler resolution"
+          dig +short ep-noisy-frog-b4b00sv3-pooler.c-6.us-east-2.aws.neon.tech
+          echo "--- direct resolution"
+          dig +short ep-noisy-frog-b4b00sv3.c-6.us-east-2.aws.neon.tech
+          echo "--- per-IP probe: raw TCP + Postgres SSLRequest"
           node -e '
             const net = require("net");
-            for (const target of [
-              ["ep-noisy-frog-b4b00sv3.c-6.us-east-2.aws.neon.tech", 5432],
-            ]) {
-              const s = net.connect({ host: target[0], port: target[1] }, () => {
-                console.log("connected", target.join(":"));
-                const f = Buffer.from([0x00,0x00,0x08,0x04,0xd2,0x16,0x2f,0xa9]);
-                s.write(f);
+            const sslreq = Buffer.from([0x00,0x00,0x08,0x04,0xd2,0x16,0x2f,0xa9]);
+            async function probe(ip) {
+              return new Promise(resolve => {
+                const s = new net.Socket();
+                const done = (msg) => { console.log(ip, "->", msg); s.destroy(); resolve(); };
+                const timer = setTimeout(() => done("timeout, no reply"), 8000);
+                s.connect(5432, ip, () => s.write(sslreq));
+                s.on("data", d => {
+                  clearTimeout(timer);
+                  const label = d[0] === 83 ? "S (TLS accepted)" : "head " + d.toString("hex").slice(0, 8);
+                  s.destroy(); resolve(console.log(ip, "->", label));
+                });
+                s.on("error", e => { clearTimeout(timer); done("error " + e.code); });
+                s.on("close", () => { clearTimeout(timer); resolve(); });
               });
-              s.on("data", d => { console.log("reply bytes:", d.length, JSON.stringify(d.slice(0,3))); });
-              s.on("error", e => console.log("error:", e.code, e.message));
-              s.on("close", () => console.log("closed"));
             }
+            (async () => {
+              for (const ip of ["52.95.251.153","52.14.39.200","77.112.100.143"]) await probe(ip);
+            })();
           '
       - run: npx prisma migrate deploy
         env:
